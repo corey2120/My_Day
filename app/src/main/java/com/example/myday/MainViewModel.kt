@@ -11,6 +11,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import kotlinx.coroutines.flow.map
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.snapshotFlow
+
 sealed class Screen {
     object Home : Screen()
     object TaskLists : Screen()
@@ -32,6 +40,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val taskLists = mutableStateOf<List<TaskList>>(emptyList())
     val tasks = mutableStateOf<List<Task>>(emptyList())
+
+    val tasksWithDates by derivedStateOf {
+        tasks.value.mapNotNull { task ->
+            try {
+                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.dateTime)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
 
     private val geminiService = GeminiService()
 
@@ -91,8 +109,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         tasks.value = tasks.value.filter { it.id != taskId }
     }
 
-    fun addTask(description: String, listId: String) {
-        val newTask = Task(description = description, dateTime = "Manually added", listId = listId)
+    fun addTask(description: String, listId: String, date: Date? = null) {
+        val dateTime = date?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it) } ?: "Someday"
+        val newTask = Task(description = description, dateTime = dateTime, listId = listId)
         tasks.value = tasks.value + newTask
     }
 

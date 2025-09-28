@@ -1,6 +1,11 @@
 package com.example.myday
 
+
+import android.R.attr.enabled
+import android.R.attr.type
 import androidx.media3.common.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,11 +17,14 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
@@ -47,7 +56,11 @@ import java.util.Locale
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import java.util.Date
 import java.util.Calendar
 
@@ -60,6 +73,9 @@ fun HomeScreen(viewModel: MainViewModel) {
     var showThemeDialog by remember { mutableStateOf(false) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var selectedDateForTask by remember { mutableStateOf<Date?>(null) }
+    val calendar = Calendar.getInstance()
+    var currentMonth by remember { mutableStateOf(calendar.get(Calendar.MONTH)) }
+    var currentYear by remember { mutableStateOf(calendar.get(Calendar.YEAR)) }
 
     Scaffold(
         topBar = {
@@ -102,10 +118,21 @@ fun HomeScreen(viewModel: MainViewModel) {
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    SimpleCalendarView(onDateClick = { date ->
-                        selectedDateForTask = date
-                        showAddTaskDialog = true  // Show the dialog when a date is clicked
-                })
+                    SimpleCalendarView(
+                        tasksWithDates = viewModel.tasksWithDates,
+                        selectedDate = selectedDateForTask,
+                        onDateClick = { date ->
+                            selectedDateForTask = date
+                            showAddTaskDialog = true  // Show the dialog when a date is clicked
+                        },
+                        currentMonth = currentMonth,
+                        currentYear = currentYear,
+                        onMonthChange = { month, year ->
+                            currentMonth = month
+                            currentYear = year
+                        },
+                        totalSpacingHeight = 16.dp
+                    )
             }
                 }
 
@@ -152,7 +179,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     }
 
     if (showAddTaskDialog) {
-        AddTaskFromHomeDialog(viewModel) { showAddTaskDialog = false }
+        AddTaskFromHomeDialog(viewModel, { showAddTaskDialog = false }, selectedDateForTask)
     }
 }
 
@@ -190,7 +217,7 @@ private fun ThemeSwitcherDialog(viewModel: MainViewModel, onDismiss: () -> Unit)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
+private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Unit, selectedDate: Date?) {
     var taskDescription by remember { mutableStateOf("") }
     var isDropdownExpanded by remember { mutableStateOf(false) }
     var selectedList by remember { mutableStateOf<TaskList?>(null) }
@@ -239,7 +266,7 @@ private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Uni
             Button(
                 onClick = {
                     selectedList?.let {
-                        viewModel.addTask(taskDescription, it.id)
+                        viewModel.addTask(taskDescription, it.id, selectedDate)
                         onDismiss()
                     }
                 },
@@ -255,30 +282,56 @@ private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Uni
         }
     )
 }
+
+
 data class CalendarDay(val dayNumberText: String, val date: Date)
+
 @Composable
 fun SimpleCalendarView(
-onDateClick: (Date) -> Unit
+    tasksWithDates: List<Date>,
+    selectedDate: Date?,
+    onDateClick: (Date) -> Unit,
+    currentMonth: Int,
+    currentYear: Int,
+    onMonthChange: (Int, Int) -> Unit,
+    totalSpacingHeight: Dp // This parameter is currently unused in the grid height calculation.
+    // It could be used for other spacing within this composable.
 ) {
-    val calendar = Calendar.getInstance()
-    val currentMonth = calendar.get(Calendar.MONTH)
-    val currentYear = calendar.get(Calendar.YEAR)
-    // Initialize monthStartDate correctly
     val monthStartDate = Calendar.getInstance().apply {
-        clear() // Clear all fields first to avoid side effects from current time
+        clear()
         set(Calendar.YEAR, currentYear)
         set(Calendar.MONTH, currentMonth)
         set(Calendar.DAY_OF_MONTH, 1)
     }
+
+    fun goToNextMonth() {
+        val newCalendar = Calendar.getInstance().apply {
+            time = monthStartDate.time // Start from the current month's start date
+            add(Calendar.MONTH, 1)
+        }
+        val nextMonth = newCalendar.get(Calendar.MONTH)
+        val nextYear = newCalendar.get(Calendar.YEAR)
+        onMonthChange(nextMonth, nextYear)
+    }
+
+    fun goToPreviousMonth() {
+        val newCalendar = Calendar.getInstance().apply {
+            time = monthStartDate.time // Start from the current month's start date
+            add(Calendar.MONTH, -1)
+        }
+        val prevMonth = newCalendar.get(Calendar.MONTH)
+        val prevYear = newCalendar.get(Calendar.YEAR)
+        onMonthChange(prevMonth, prevYear)
+    }
+
     val daysInMonth = monthStartDate.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val firstDayOfWeekSystem = Calendar.getInstance().firstDayOfWeek // e.g., Calendar.SUNDAY or Calendar.MONDAY
-    val firstDayOfWeekOfMonth = monthStartDate.get(Calendar.DAY_OF_WEEK) // Day of week for the 1st (1=Sunday, 2=Monday...)
+    val firstDayOfWeekSystem = Calendar.getInstance().firstDayOfWeek
+    val firstDayOfWeekOfMonth = monthStartDate.get(Calendar.DAY_OF_WEEK)
 
     val monthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(monthStartDate.time)
 
-    // Calculate empty cells needed at the start of the grid
     val emptyCells = (firstDayOfWeekOfMonth - firstDayOfWeekSystem + 7) % 7
-    val dayCellsData = remember(currentYear, currentMonth,emptyCells, daysInMonth) {
+    val dayCellsData = remember(currentYear, currentMonth, emptyCells, daysInMonth) {
         val cells = mutableListOf<CalendarDay?>()
         repeat(emptyCells) { cells.add(null) }
         for (day in 1..daysInMonth) {
@@ -302,25 +355,34 @@ onDateClick: (Date) -> Unit
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
-        Text(
-            text = monthName,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 12.dp) // Only bottom padding here
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { goToPreviousMonth() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Month")
+            }
+            Text(
+                text = monthName,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            IconButton(onClick = { goToNextMonth() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month")
+            }
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp), // Added horizontal padding to the Row
-            horizontalArrangement = Arrangement.SpaceAround // This should work well
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceAround
         ) {
-            val dayFormatter = remember {SimpleDateFormat("E", Locale.getDefault()) }// "E" for short day name like "Mon"
-            val tempDisplayCal = remember {Calendar.getInstance() }
-
+            val dayFormatter = remember { SimpleDateFormat("E", Locale.getDefault()) }
             val daysOfWeekHeader = remember(firstDayOfWeekSystem) {
-            val localCal = Calendar.getInstance().apply {
-                timeInMillis = monthStartDate.timeInMillis
-                set(Calendar.DAY_OF_WEEK, firstDayOfWeekSystem)
-            }
+                val tempDisplayCal = Calendar.getInstance().apply {
+                    set(Calendar.DAY_OF_WEEK, firstDayOfWeekSystem)
+                }
                 List(7) {
                     val dayName = dayFormatter.format(tempDisplayCal.time)
                     tempDisplayCal.add(Calendar.DAY_OF_MONTH, 1)
@@ -331,59 +393,80 @@ onDateClick: (Date) -> Unit
                 Text(
                     text = dayName,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.weight(1f), // weight is fine if Row is fillMaxWidth
-                    textAlign = TextAlign.Center // Center the day name text
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
                 )
             }
         }
         Spacer(modifier = Modifier.height(8.dp)) // Vertical spacer
 
         if (dayCellsData.isNotEmpty()) {
-            val numberOfRows = (dayCellsData.size + 6) / 7 // Ceiling division to ensure we have enough rows)
-            val celldHeightDp = 48.dp
-            val grindHeight = celldHeightDp * numberOfRows
+            val numberOfRows = (dayCellsData.size + 6) / 7
+            val cellHeight = 48.dp
+            val gridVerticalSpacing = 4.dp // Spacing between rows in the grid
+
+            val actualRows = if (numberOfRows > 0) numberOfRows else 1
+            val totalCellsOnlyHeight = cellHeight * actualRows
+
+            // Calculate total vertical spacing within the grid
+            val gridInternalVerticalSpacing = if (actualRows > 1) {
+                gridVerticalSpacing * (actualRows - 1)
+            } else {
+                0.dp
+            }
+            val gridHeight = totalCellsOnlyHeight + gridInternalVerticalSpacing
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(7),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(grindHeight)
-                    .padding(horizontal = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    .height(gridHeight), // Use the calculated gridHeight
+                verticalArrangement = Arrangement.spacedBy(gridVerticalSpacing),
+                horizontalArrangement = Arrangement.spacedBy(4.dp), // Spacing between columns
                 userScrollEnabled = false,
             ) {
                 items(dayCellsData) { calendarDayData ->
-                    val cellModifierWithClick: Modifier
                     if (calendarDayData != null) {
-                        cellModifierWithClick = Modifier
-                            .aspectRatio(1f)
-                            .clickable { onDateClick(calendarDayData.date) }
-                    } else {
-                        cellModifierWithClick = Modifier.aspectRatio(1f)
-                    }
+                        val isSelected = selectedDate?.let {
+                            val cal1 = Calendar.getInstance().apply { time = it }
+                            val cal2 = Calendar.getInstance().apply { time = calendarDayData.date }
+                            cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) && cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+                        } ?: false
 
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .aspectRatio(1f) // Makes cells square
-                            .padding(2.dp)
-                            .then( //Conditionally apply clickable
-                            if (calendarDayData != null) {
-                                Modifier.clickable { onDateClick(calendarDayData.date) }
-                            } else {
-                                Modifier
-                            }
-                            )
+                        val hasTasks = tasksWithDates.any { taskDate ->
+                            val cal1 = Calendar.getInstance().apply { time = taskDate }
+                            val cal2 = Calendar.getInstance().apply { time = calendarDayData.date }
+                            cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) && cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+                        }
 
-                            ) {
-                        if (calendarDayData != null) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .aspectRatio(1f)
+                                .padding(2.dp)
+                                .border(
+                                    width = if (isSelected) 2.dp else 0.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .clickable { onDateClick(calendarDayData.date) }
+                        ) {
                             Text(
                                 text = calendarDayData.dayNumberText,
                                 style = MaterialTheme.typography.bodyMedium
                             )
+                            if (hasTasks) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 4.dp) // Adjust padding for the indicator
+                                        .size(4.dp)
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                )
+                            }
                         }
-                        // Empty string cells will result in an empty Box, maintaining grid structure
+                    } else {
+                        Box(modifier = Modifier.aspectRatio(1f)) // Empty cell
                     }
                 }
             }
@@ -392,6 +475,8 @@ onDateClick: (Date) -> Unit
             Log.e("SimpleCalendarView", "Calendar data (dayCells) is unavailable or empty.")
         }
     }
-    data class calendarDay(val dayNumberText: String, val date: Date)
+    // Note: The data class 'calendarDay' was defined at the top of this snippet.
+    // If you had 'data class calendarDay(...)' here, it would be a local class,
+    // which is fine, but make sure its usage in dayCellsData.add(...) matches.
+    // I used 'CalendarDay' (capital C) assuming the top-level definition.
 }
-

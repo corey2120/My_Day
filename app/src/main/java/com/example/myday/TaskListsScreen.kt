@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -40,7 +41,7 @@ fun TaskListsScreen(viewModel: MainViewModel) {
                 title = { Text("My Task Lists") },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.onBackToHome() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to Home")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
                     }
                 }
             )
