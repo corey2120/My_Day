@@ -1,33 +1,44 @@
 package com.example.myday
 
-import android.app.Application
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+
+
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 sealed class Screen {
     object Home : Screen()
     object TaskLists : Screen()
     data class Tasks(val listId: String) : Screen()
+    object Notes : Screen()
+    data class NoteDetail(val note: Note?) : Screen()
 }
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val settingsManager = SettingsManager(application)
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val settingsManager: SettingsManager,
+    private val taskDao: TaskDao,
+    private val NoteDao: NoteDao,
+) : ViewModel() {
 
     var currentScreen by mutableStateOf<Screen>(Screen.Home)
         private set
@@ -38,8 +49,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = SettingsManager.DEFAULT_THEME
     )
 
-    val taskLists = mutableStateOf<List<TaskList>>(emptyList())
-    val tasks = mutableStateOf<List<Task>>(emptyList())
+    val taskLists: StateFlow<List<TaskList>> = taskDao.getTaskLists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val tasks: StateFlow<List<Task>> = taskDao.getAllTasks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val tasksWithDates by derivedStateOf {
         tasks.value.mapNotNull { task ->
@@ -47,6 +61,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.dateTime)
             } catch (e: Exception) {
                 null
+            }
+        }
+    }
+
+    val notes: StateFlow<List<Note>> = NoteDao.getAllNotes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        ensureDefaultTaskListExists()
+    }
+
+    private fun ensureDefaultTaskListExists() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val taskLists = taskDao.getTaskLists().first()
+                val generalList = taskLists.find { it.name == "General" }
+                if (generalList == null) {
+                    taskDao.insertTaskList(TaskList(name = "General"))
+                }
             }
         }
     }
@@ -59,8 +92,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun addTaskList(name: String) {
-        val newList = TaskList(name = name)
-        taskLists.value = taskLists.value + newList
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                taskDao.insertTaskList(TaskList(name = name))
+            }
+        }
+    }
+
+    fun renameTaskList(listId: String, newName: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val taskList = taskLists.value.find { it.id == listId }?.copy(name = newName)
+                taskList?.let { taskDao.updateTaskList(it) }
+            }
+        }
+    }
+
+    fun editTaskList(listId: String, newName: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val taskList = taskLists.value.find { it.id == listId }?.copy(name = newName)
+                taskList?.let { taskDao.updateTaskList(it) }
+            }
+        }
+    }
+
+    fun deleteTaskList(listId: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val taskList = taskLists.value.find { it.id == listId }
+                taskList?.let { taskDao.deleteTaskList(it) }
+            }
+        }
     }
 
     fun onTaskListClicked(listId: String) {
@@ -75,44 +138,72 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         currentScreen = Screen.TaskLists
     }
 
+
     fun onBackToHome() {
         currentScreen = Screen.Home
     }
 
     fun toggleTaskCompleted(taskId: String) {
-        val currentTasks = tasks.value.toMutableList()
-        val taskIndex = currentTasks.indexOfFirst { it.id == taskId }
-        if (taskIndex != -1) {
-            val task = currentTasks[taskIndex]
-            currentTasks[taskIndex] = task.copy(isCompleted = !task.isCompleted)
-            tasks.value = currentTasks
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val task = tasks.value.find { it.id == taskId }
+                task?.let { taskDao.updateTask(it.copy(isCompleted = !it.isCompleted)) }
+            }
         }
     }
 
     fun cycleTaskPriority(taskId: String) {
-        val currentTasks = tasks.value.toMutableList()
-        val taskIndex = currentTasks.indexOfFirst { it.id == taskId }
-        if (taskIndex != -1) {
-            val task = currentTasks[taskIndex]
-            val nextPriority = when (task.priority) {
-                Priority.NONE -> Priority.LOW
-                Priority.LOW -> Priority.MEDIUM
-                Priority.MEDIUM -> Priority.HIGH
-                Priority.HIGH -> Priority.NONE
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val task = tasks.value.find { it.id == taskId }
+                task?.let {
+                    val nextPriority = when (it.priority) {
+                        Priority.NONE -> Priority.LOW
+                        Priority.LOW -> Priority.MEDIUM
+                        Priority.MEDIUM -> Priority.HIGH
+                        Priority.HIGH -> Priority.NONE
+                    }
+                    taskDao.updateTask(it.copy(priority = nextPriority))
+                }
             }
-            currentTasks[taskIndex] = task.copy(priority = nextPriority)
-            tasks.value = currentTasks
         }
     }
 
     fun deleteTask(taskId: String) {
-        tasks.value = tasks.value.filter { it.id != taskId }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val task = tasks.value.find { it.id == taskId }
+                task?.let { taskDao.deleteTask(it) }
+            }
+        }
+    }
+
+    fun renameTask(taskId: String, newDescription: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val task = tasks.value.find { it.id == taskId }
+                task?.let { taskDao.updateTask(it.copy(description = newDescription)) }
+            }
+        }
+    }
+
+    fun editTask(taskId: String, newDescription: String, newDateTime: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val task = tasks.value.find { it.id == taskId }
+                task?.let { taskDao.updateTask(it.copy(description = newDescription, dateTime = newDateTime)) }
+            }
+        }
     }
 
     fun addTask(description: String, listId: String, date: Date? = null) {
-        val dateTime = date?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it) } ?: "Someday"
-        val newTask = Task(description = description, dateTime = dateTime, listId = listId)
-        tasks.value = tasks.value + newTask
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val dateTime = date?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it) } ?: "Someday"
+                val newTask = Task(description = description, dateTime = dateTime, listId = listId)
+                taskDao.insertTask(newTask)
+            }
+        }
     }
 
     fun processVoiceInput(text: String, listId: String) {
@@ -123,8 +214,63 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dateTime = geminiTask.dateTime,
                     listId = listId
                 )
-                tasks.value = tasks.value + newTask
+                taskDao.insertTask(newTask)
             }
         }
     }
-}
+
+    fun moveTask(taskId: String, newListId: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val task = tasks.value.find { it.id == taskId }
+                task?.let {
+                    taskDao.updateTask(it.copy(listId = newListId))
+                }
+            }
+        }
+    }
+
+    fun addNote(title: String, content: String) {
+        viewModelScope.launch {
+            val colors = listOf(
+                0xFFFFFFFF,
+                0xFFF28B82,
+                0xFFFBBC04,
+                0xFFFFF475,
+                0xFFCCFF90,
+                0xFFA7FFEB,
+                0xFFCBF0F8,
+                0xFFAECBFA,
+                0xFFD7AEFB,
+                0xFFFDCFE8,
+                0xFFE6C9A8,
+                0xFFE8EAED
+            )
+            val randomColor = colors.random()
+            NoteDao.insertNote(Note(title = title, content = content, color = randomColor.toInt()))
+        }
+    }
+
+    fun updateNote(note: Note) {
+        viewModelScope.launch {
+            NoteDao.updateNote(note)
+        }
+    }
+
+    fun deleteNote(note: Note) {
+        viewModelScope.launch {
+            NoteDao.deleteNote(note)
+        }
+    }
+
+    fun onNavigationToNotes() {
+        currentScreen = Screen.Notes
+    }
+
+    fun onNavigateToNoteDetail(note: Note?) {
+        currentScreen = Screen.NoteDetail(note)
+    }
+
+    fun onBackToNotes() {
+        currentScreen = Screen.Notes
+    }}

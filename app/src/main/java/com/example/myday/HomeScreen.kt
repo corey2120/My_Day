@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.AlertDialog
@@ -38,6 +39,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -55,6 +57,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -85,10 +88,14 @@ fun LocalDate.toDate(): Date {
     return Date.from(this.atStartOfDay(ZoneId.systemDefault()).toInstant())
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: MainViewModel) {
-    val importantTasks = viewModel.tasks.value.filter { it.priority != Priority.NONE }
+    val tasks: List<Task> by viewModel.tasks.collectAsState()
+    val taskLists: List<TaskList> by viewModel.taskLists.collectAsState()
+
+    val importantTasks = tasks.filter { it.priority != Priority.NONE }
     val groupedTasks = importantTasks.groupBy { it.listId }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
@@ -98,7 +105,7 @@ fun HomeScreen(viewModel: MainViewModel) {
     var currentYear by remember { mutableStateOf(calendar.get(Calendar.YEAR)) }
 
 
-    val tasksForSelectedDate = viewModel.tasks.value.filter { task ->
+    val tasksForSelectedDate = tasks.filter { task ->
 
         try {
             // Assuming the dateTime string starts with a "yyyy-MM-dd" format.
@@ -114,29 +121,46 @@ fun HomeScreen(viewModel: MainViewModel) {
             TopAppBar(
                 title = { Text("My Tasks") },
                 actions = {
-                    IconButton(onClick = { showThemeDialog = true }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Change Theme")
+                    var showMenu by remember { mutableStateOf(false) }
+
+                    IconButton(onClick = { showMenu = !showMenu }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More"
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("View All Task Lists") },
+                            onClick = {
+                                viewModel.onNavigateToTaskLists()
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Settings") },
+                            onClick = {
+                                showThemeDialog = true
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("View Notes") },
+                            onClick = {
+                                viewModel.onNavigationToNotes()
+                                showMenu = false
+                            }
+                        )
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddTaskDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add a task")
-            }
         }
     ) { paddingValues ->
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
-            item {
-                Button(
-                    onClick = { viewModel.onNavigateToTaskLists() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Text("View All Task Lists")
-                }
-            }
             item {
                 Column(
                     modifier = Modifier
@@ -150,7 +174,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     SimpleCalendarView(
-                        tasksWithDates = viewModel.tasksWithDates,
+                        tasks = tasks,
                         selectedDate = selectedDate.toDate(),
                         onDateClick = { date ->
                             selectedDate = date.toLocalDate()
@@ -171,48 +195,11 @@ fun HomeScreen(viewModel: MainViewModel) {
                     TaskViewer(
                         selectedDate = selectedDate,
                         tasks = tasksForSelectedDate,
-                        onAddTaskClick = { showAddTaskDialog = true },
+                        onAddTaskClicked = { showAddTaskDialog = true },
                         onToggleTask = { task ->
-
-                            Log.d("HomeScreen", "Toggle completion for task: ${task.description}")
+                            viewModel.toggleTaskCompleted(task.id)
                         }
                     )
-                }
-            }
-
-
-            groupedTasks.forEach { (listId, tasks) ->
-                val listName = viewModel.taskLists.value.find { it.id == listId }?.name ?: "Unknown List"
-
-                item {
-                    Text(
-                        text = listName,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
-
-                items(tasks) { task ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        PriorityIndicator(priority = task.priority) {}
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = task.description,
-                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                            )
-                            Text(
-                                text = task.dateTime,
-                                style = MaterialTheme.typography.bodySmall,
-                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -262,8 +249,9 @@ private fun ThemeSwitcherDialog(viewModel: MainViewModel, onDismiss: () -> Unit)
 @Composable
 private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Unit, selectedDate: Date?) {
     var taskDescription by remember { mutableStateOf("") }
-    var isDropdownExpanded by remember { mutableStateOf(false) }
-    var selectedList by remember { mutableStateOf<TaskList?>(null) }
+    val generalList by remember(viewModel.taskLists.value) {
+        mutableStateOf(viewModel.taskLists.value.find { it.name == "General" })
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -275,45 +263,17 @@ private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Uni
                     onValueChange = { taskDescription = it },
                     label = { Text("Task Description") }
                 )
-
-                ExposedDropdownMenuBox(
-                    expanded = isDropdownExpanded,
-                    onExpandedChange = { isDropdownExpanded = it }
-                ) {
-                    TextField(
-                        value = selectedList?.name ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Add to list") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isDropdownExpanded) },
-                        modifier = Modifier.menuAnchor()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = isDropdownExpanded,
-                        onDismissRequest = { isDropdownExpanded = false }
-                    ) {
-                        viewModel.taskLists.value.forEach { list ->
-                            DropdownMenuItem(
-                                text = { Text(list.name) },
-                                onClick = {
-                                    selectedList = list
-                                    isDropdownExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    selectedList?.let {
+                    generalList?.let {
                         viewModel.addTask(taskDescription, it.id, selectedDate)
                         onDismiss()
                     }
                 },
-                enabled = taskDescription.isNotBlank() && selectedList != null
+                enabled = taskDescription.isNotBlank() && generalList != null
             ) {
                 Text("Add")
             }
@@ -331,7 +291,7 @@ data class CalendarDay(val dayNumberText: String, val date: Date)
 
 @Composable
 fun SimpleCalendarView(
-    tasksWithDates: List<Date>,
+    tasks: List<Task>,
     selectedDate: Date?,
     onDateClick: (Date) -> Unit,
     currentMonth: Int,
@@ -474,10 +434,13 @@ fun SimpleCalendarView(
                             cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) && cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
                         } ?: false
 
-                        val hasTasks = tasksWithDates.any { taskDate ->
-                            val cal1 = Calendar.getInstance().apply { time = taskDate }
-                            val cal2 = Calendar.getInstance().apply { time = calendarDayData.date }
-                            cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) && cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+                        val tasksForDay = tasks.count { task ->
+                            try {
+                                val taskDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.dateTime.substring(0, 10))
+                                taskDate?.toLocalDate() == calendarDayData.date.toLocalDate()
+                            } catch (e: Exception) {
+                                false
+                            }
                         }
 
                         Box(
@@ -496,14 +459,21 @@ fun SimpleCalendarView(
                                 text = calendarDayData.dayNumberText,
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                            if (hasTasks) {
+                            if (tasksForDay > 0) {
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.BottomCenter)
-                                        .padding(bottom = 4.dp) // Adjust padding for the indicator
-                                        .size(4.dp)
-                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
-                                )
+                                        .padding(bottom = 4.dp)
+                                        .size(16.dp)
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = tasksForDay.toString(),
+                                        color = Color.White,
+                                        fontSize = 10.sp
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -524,7 +494,7 @@ fun SimpleCalendarView(
 fun TaskViewer(
     selectedDate: LocalDate,
     tasks: List<Task>,
-    onAddTaskClick: () -> Unit, // Callback to open the add task dialog
+    onAddTaskClicked: () -> Unit, // Callback to open the add task dialog
     onToggleTask: (Task) -> Unit // Callback to update a task's status
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("eeee, MMM d")
@@ -552,7 +522,7 @@ fun TaskViewer(
                     )
                 }
                 IconButton(
-                    onClick = { onAddTaskClick() }, // Use the callback to show the dialog
+                    onClick = { onAddTaskClicked() }, // Use the callback to show the dialog
                     modifier = Modifier
                         .clip(CircleShape)
                         .size(40.dp),

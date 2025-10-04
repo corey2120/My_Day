@@ -17,9 +17,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,14 +54,23 @@ fun PriorityIndicator(priority: Priority, onClick: () -> Unit) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TasksScreen(viewModel: MainViewModel, listId: String) {
-    val tasksForList = viewModel.tasks.value.filter { it.listId == listId }
-    val listName = viewModel.taskLists.value.find { it.id == listId }?.name ?: "Tasks"
+    val tasks: List<Task> by viewModel.tasks.collectAsState()
+    val taskLists: List<TaskList> by viewModel.taskLists.collectAsState()
+
+    val tasksForList = tasks.filter { it.listId == listId }
+    val listName = taskLists.find { it.id == listId }?.name ?: "Tasks"
 
     var showTaskDialog by remember { mutableStateOf(false) }
     var newTaskDescription by remember { mutableStateOf("") }
+
+    var selectedTask by remember { mutableStateOf<Task?>(null) }
+    var showEditOptionsDialog by remember { mutableStateOf(false) }
+    var showRenameTaskDialog by remember { mutableStateOf(false) }
+    var showEditTaskDialog by remember { mutableStateOf(false) }
+    var showMoveTaskDialog by remember { mutableStateOf(false) }
 
     val speechRecognizerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -107,34 +124,47 @@ fun TasksScreen(viewModel: MainViewModel, listId: String) {
     ) { paddingValues ->
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
             items(tasksForList) { task ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = task.isCompleted,
-                        onCheckedChange = { viewModel.toggleTaskCompleted(task.id) }
+                Box(
+                    modifier = Modifier.combinedClickable(
+                        onClick = { viewModel.toggleTaskCompleted(task.id) },
+                        onLongClick = {
+                            selectedTask = task
+                            showEditOptionsDialog = true
+                        }
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    PriorityIndicator(priority = task.priority) {
-                        viewModel.cycleTaskPriority(task.id)
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = task.description,
-                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = task.isCompleted,
+                            onCheckedChange = { viewModel.toggleTaskCompleted(task.id) }
                         )
-                        Text(
-                            text = task.dateTime,
-                            style = MaterialTheme.typography.bodySmall,
-                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                        )
-                    }
-                    IconButton(onClick = { viewModel.deleteTask(task.id) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete Task")
+                        Spacer(modifier = Modifier.width(16.dp))
+                        PriorityIndicator(priority = task.priority) {
+                            viewModel.cycleTaskPriority(task.id)
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = task.description,
+                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                            )
+                            Text(
+                                text = task.dateTime,
+                                style = MaterialTheme.typography.bodySmall,
+                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                            )
+                        }
+                        IconButton(onClick = {
+                            selectedTask = task
+                            showEditOptionsDialog = true
+                        }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Task Options")
+                        }
                     }
                 }
             }
@@ -142,34 +172,257 @@ fun TasksScreen(viewModel: MainViewModel, listId: String) {
     }
 
     if (showTaskDialog) {
-        AlertDialog(
-            onDismissRequest = { showTaskDialog = false },
-            title = { Text("Add New Task") },
-            text = {
-                TextField(
-                    value = newTaskDescription,
-                    onValueChange = { newTaskDescription = it },
-                    label = { Text("Task Description") }
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newTaskDescription.isNotBlank()) {
-                            viewModel.addTask(newTaskDescription, listId)
-                            newTaskDescription = ""
-                            showTaskDialog = false
-                        }
-                    }
-                ) {
-                    Text("Add")
-                }
-            },
-            dismissButton = {
-                Button(onClick = { showTaskDialog = false }) {
-                    Text("Cancel")
-                }
+        AddTaskDialog(
+            onDismiss = { showTaskDialog = false },
+            onAddTask = { description ->
+                viewModel.addTask(description, listId)
             }
         )
     }
+
+    if (showEditOptionsDialog) {
+        EditOptionsDialog(
+            onDismiss = { showEditOptionsDialog = false },
+            onRename = {
+                showEditOptionsDialog = false
+                showRenameTaskDialog = true
+            },
+            onEdit = {
+                showEditOptionsDialog = false
+                showEditTaskDialog = true
+            },
+            onDelete = {
+                selectedTask?.let { viewModel.deleteTask(it.id) }
+                showEditOptionsDialog = false
+            },
+            onMove = {
+                showEditOptionsDialog = false
+                showMoveTaskDialog = true
+            }
+        )
+    }
+
+    if (showMoveTaskDialog) {
+        selectedTask?.let {
+            MoveTaskDialog(
+                viewModel = viewModel,
+                task = it,
+                onDismiss = { showMoveTaskDialog = false }
+            )
+        }
+    }
+
+    if (showRenameTaskDialog) {
+        selectedTask?.let { task ->
+            RenameTaskDialog(
+                task = task,
+                onDismiss = { showRenameTaskDialog = false },
+                onRename = { newDescription ->
+                    viewModel.renameTask(task.id, newDescription)
+                    showRenameTaskDialog = false
+                }
+            )
+        }
+    }
+
+    if (showEditTaskDialog) {
+        selectedTask?.let { task ->
+            EditTaskDialog(
+                task = task,
+                onDismiss = { showEditTaskDialog = false },
+                onSave = { newDescription, newDateTime ->
+                    viewModel.editTask(task.id, newDescription, newDateTime)
+                    showEditTaskDialog = false
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddTaskDialog(onDismiss: () -> Unit, onAddTask: (String) -> Unit) {
+    var newTaskDescription by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add New Task") },
+        text = {
+            TextField(
+                value = newTaskDescription,
+                onValueChange = { newTaskDescription = it },
+                label = { Text("Task Description") }
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (newTaskDescription.isNotBlank()) {
+                        onAddTask(newTaskDescription)
+                        onDismiss()
+                    }
+                }
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun EditOptionsDialog(
+    onDismiss: () -> Unit,
+    onRename: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onMove: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Task Options") },
+        text = {
+            Column {
+                Text("What would you like to do?", modifier = Modifier.padding(bottom = 8.dp))
+                Button(onClick = onRename, modifier = Modifier.fillMaxWidth()) {
+                    Text("Rename")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
+                    Text("Edit")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                    Text("Delete")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onMove, modifier = Modifier.fillMaxWidth()) {
+                    Text("Move")
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun RenameTaskDialog(
+    task: Task,
+    onDismiss: () -> Unit,
+    onRename: (String) -> Unit
+) {
+    var newDescription by remember { mutableStateOf(task.description) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename Task") },
+        text = {
+            TextField(
+                value = newDescription,
+                onValueChange = { newDescription = it },
+                label = { Text("New Description") }
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onRename(newDescription)
+                }
+            ) {
+                Text("Rename")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun EditTaskDialog(
+    task: Task,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var newDescription by remember { mutableStateOf(task.description) }
+    var newDateTime by remember { mutableStateOf(task.dateTime) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Task") },
+        text = {
+            Column {
+                TextField(
+                    value = newDescription,
+                    onValueChange = { newDescription = it },
+                    label = { Text("Description") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = newDateTime,
+                    onValueChange = { newDateTime = it },
+                    label = { Text("Date and Time") }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(newDescription, newDateTime)
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun MoveTaskDialog(
+    viewModel: MainViewModel,
+    task: Task,
+    onDismiss: () -> Unit
+) {
+    val taskLists by viewModel.taskLists.collectAsState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Move Task") },
+        text = {
+            Column {
+                Text("Select a new list for this task:")
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyColumn {
+                    items(taskLists) { list ->
+                        Text(
+                            text = list.name,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.moveTask(task.id, list.id)
+                                    onDismiss()
+                                }
+                                .padding(vertical = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

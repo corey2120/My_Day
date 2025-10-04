@@ -1,10 +1,11 @@
 package com.example.myday
 
-import kotlinx.serialization.Serializable
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import java.util.UUID
 
-@Serializable
+@Entity(tableName = "task_lists")
 data class TaskList(
-    val id: String = UUID.randomUUID().toString(),
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val name: String
 )
