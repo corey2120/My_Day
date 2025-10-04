@@ -23,6 +23,7 @@ import androidx.compose.runtime.snapshotFlow
 
 
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable.isCompleted
 import javax.inject.Inject
 
 sealed class Screen {
@@ -91,6 +92,7 @@ class MainViewModel @Inject constructor(
             settingsManager.setTheme(themeName)
         }
     }
+
     fun addTaskList(name: String) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -98,6 +100,8 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+
+
 
     fun renameTaskList(listId: String, newName: String) {
         viewModelScope.launch {

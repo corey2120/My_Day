@@ -1,28 +1,20 @@
+@file:OptIn(UnstableApi::class, ExperimentalFoundationApi::class)
+
 package com.example.myday
 
-
-import android.R.attr.enabled
-import android.R.attr.type
+import android.util.Log
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,34 +24,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,17 +34,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.media3.common.util.Log
+import androidx.media3.common.util.UnstableApi
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
+import java.util.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import com.google.accompanist.pager.pagerTabIndicatorOffset
+import kotlinx.coroutines.CoroutineScope
 
 // Helper functions to convert between legacy Date and modern LocalDate
 fun Date.toLocalDate(): LocalDate {
@@ -88,38 +56,21 @@ fun LocalDate.toDate(): Date {
     return Date.from(this.atStartOfDay(ZoneId.systemDefault()).toInstant())
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: MainViewModel) {
-    val tasks: List<Task> by viewModel.tasks.collectAsState()
-    val taskLists: List<TaskList> by viewModel.taskLists.collectAsState()
-
-    val importantTasks = tasks.filter { it.priority != Priority.NONE }
-    val groupedTasks = importantTasks.groupBy { it.listId }
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val scope = rememberCoroutineScope()
     var showThemeDialog by remember { mutableStateOf(false) }
-    var showAddTaskDialog by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    val calendar = Calendar.getInstance()
-    var currentMonth by remember { mutableStateOf(calendar.get(Calendar.MONTH)) }
-    var currentYear by remember { mutableStateOf(calendar.get(Calendar.YEAR)) }
 
-
-    val tasksForSelectedDate = tasks.filter { task ->
-
-        try {
-            // Assuming the dateTime string starts with a "yyyy-MM-dd" format.
-            val taskDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.dateTime.substring(0, 10))
-            taskDate?.toLocalDate() == selectedDate
-        } catch (e: Exception) {
-            false
-        }
+    if (showThemeDialog) {
+        ThemeSwitcherDialog(viewModel = viewModel, onDismiss = { showThemeDialog = false })
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Tasks") },
+                title = { Text("My Day") },
                 actions = {
                     var showMenu by remember { mutableStateOf(false) }
 
@@ -135,13 +86,6 @@ fun HomeScreen(viewModel: MainViewModel) {
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("View All Task Lists") },
-                            onClick = {
-                                viewModel.onNavigateToTaskLists()
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
                             text = { Text("Settings") },
                             onClick = {
                                 showThemeDialog = true
@@ -151,7 +95,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         DropdownMenuItem(
                             text = { Text("View Notes") },
                             onClick = {
-                                viewModel.onNavigationToNotes()
+                                scope.launch { pagerState.animateScrollToPage(2) }
                                 showMenu = false
                             }
                         )
@@ -160,60 +104,152 @@ fun HomeScreen(viewModel: MainViewModel) {
             )
         }
     ) { paddingValues ->
-        LazyColumn(modifier = Modifier.padding(paddingValues)) {
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 8.dp, bottom = 16.dp)
-                ) {
-                    Text(
-                        text = "My Calendar",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    SimpleCalendarView(
-                        tasks = tasks,
-                        selectedDate = selectedDate.toDate(),
-                        onDateClick = { date ->
-                            selectedDate = date.toLocalDate()
-                        },
-                        currentMonth = currentMonth,
-                        currentYear = currentYear,
-                        onMonthChange = { month, year ->
-                            currentMonth = month
-                            currentYear = year
-                        },
-                        totalSpacingHeight = 16.dp
-                    )
-                }
-            }
-            item {
-                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-
-                    TaskViewer(
-                        selectedDate = selectedDate,
-                        tasks = tasksForSelectedDate,
-                        onAddTaskClicked = { showAddTaskDialog = true },
-                        onToggleTask = { task ->
-                            viewModel.toggleTaskCompleted(task.id)
-                        }
-                    )
-                }
-            }
+        Column(modifier = Modifier.padding(paddingValues)) {
+            Tabs(pagerState = pagerState, scope = scope)
+            Pager(pagerState = pagerState, viewModel = viewModel)
         }
-    }
-
-    if (showThemeDialog) {
-        ThemeSwitcherDialog(viewModel) { showThemeDialog = false }
-    }
-
-    if (showAddTaskDialog) {
-        AddTaskFromHomeDialog(viewModel, { showAddTaskDialog = false }, selectedDate.toDate())
     }
 }
 
+@Composable
+fun Tabs(pagerState: PagerState, scope: CoroutineScope) {    val titles = listOf("Calendar", "Tasks", "Notes")
+
+    TabRow(
+        selectedTabIndex = pagerState.currentPage,indicator = { tabPositions ->
+            // Check if the tabPositions list is not empty to avoid an index out of bounds exception.
+            if (tabPositions.isNotEmpty()) {
+                TabRowDefaults.Indicator(
+                    // Correctly access the TabPosition using the current page index.
+                    Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    ) {
+        titles.forEachIndexed { index, title ->
+            Tab(
+                text = { Text(title) },
+                selected = pagerState.currentPage == index,
+                onClick = { scope.launch { pagerState.animateScrollToPage(index) } }
+            )
+        }
+    }
+}
+
+@Composable
+fun Pager(pagerState: PagerState, viewModel: MainViewModel) {
+    HorizontalPager(state = pagerState) { page ->
+        when (page) {
+            0 -> CalendarScreen(viewModel = viewModel)
+            1 -> TaskListsScreen(viewModel = viewModel)
+            2 -> NotesScreen(viewModel = viewModel)
+        }
+    }
+}
+
+@Composable
+fun CalendarScreen(viewModel: MainViewModel) {
+    val tasks: List<Task> by viewModel.tasks.collectAsState()
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var currentMonth by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MONTH)) }
+    var currentYear by remember { mutableStateOf(Calendar.getInstance().get(Calendar.YEAR)) }
+    var showAddTaskDialog by remember { mutableStateOf(false) }
+
+    if (showAddTaskDialog) {
+        AddTaskFromHomeDialog(
+            viewModel = viewModel,
+            onDismiss = { showAddTaskDialog = false },
+            selectedDate = selectedDate.toDate()
+        )
+    }
+
+    val tasksForSelectedDate by remember(tasks, selectedDate) {
+        mutableStateOf(tasks.filter { task ->
+            try {
+                // Assuming task.dateTime is "yyyy-MM-dd HH:mm:ss"
+                val taskDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.dateTime.substring(0, 10))
+                taskDate?.toLocalDate() == selectedDate
+            } catch (e: Exception) {
+                false
+            }
+        })
+    }
+
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 8.dp, bottom = 16.dp)
+            ) {
+                Text(
+                    text = "My Calendar",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                SimpleCalendarView(
+                    tasks = tasks,
+                    selectedDate = selectedDate.toDate(),
+                    onDateClick = { date ->
+                        selectedDate = date.toLocalDate()
+                    },
+                    currentMonth = currentMonth,
+                    currentYear = currentYear,
+                    onMonthChange = { month, year ->
+                        currentMonth = month
+                        currentYear = year
+                    }
+                )
+            }
+        }
+        item {
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                TaskViewer(
+                    selectedDate = selectedDate,
+                    tasks = tasksForSelectedDate,
+                    onAddTaskClicked = { showAddTaskDialog = true },
+                    onToggleTask = { task ->
+                        viewModel.toggleTaskCompleted(task.id)
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A placeholder screen to display a list of all tasks.
+ */
+@Composable
+fun TasksScreen(viewModel: MainViewModel) {
+    val tasks by viewModel.tasks.collectAsState()
+
+    if (tasks.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("No tasks yet. Add one from the calendar!")
+        }
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                Text(
+                    "All Tasks",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            items(tasks, key = { it.id }) { task ->
+                TaskItem(task = task, onToggle = { viewModel.toggleTaskCompleted(task.id) })
+            }
+        }
+    }
+}
 
 @Composable
 private fun ThemeSwitcherDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
@@ -249,9 +285,10 @@ private fun ThemeSwitcherDialog(viewModel: MainViewModel, onDismiss: () -> Unit)
 @Composable
 private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Unit, selectedDate: Date?) {
     var taskDescription by remember { mutableStateOf("") }
-    val generalList by remember(viewModel.taskLists.value) {
-        mutableStateOf(viewModel.taskLists.value.find { it.name == "General" })
-    }
+    val taskLists by viewModel.taskLists.collectAsState()
+
+    // Correctly find the list based on the current state
+    val generalList = taskLists.find { it.name == "General" }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -261,7 +298,8 @@ private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Uni
                 TextField(
                     value = taskDescription,
                     onValueChange = { taskDescription = it },
-                    label = { Text("Task Description") }
+                    label = { Text("Task Description") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         },
@@ -269,7 +307,11 @@ private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Uni
             Button(
                 onClick = {
                     generalList?.let {
-                        viewModel.addTask(taskDescription, it.id, selectedDate)
+                        viewModel.addTask(
+                            description = taskDescription,
+                            listId = it.id,
+                            date = selectedDate
+                        )
                         onDismiss()
                     }
                 },
@@ -286,7 +328,6 @@ private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Uni
     )
 }
 
-
 data class CalendarDay(val dayNumberText: String, val date: Date)
 
 @Composable
@@ -296,8 +337,7 @@ fun SimpleCalendarView(
     onDateClick: (Date) -> Unit,
     currentMonth: Int,
     currentYear: Int,
-    onMonthChange: (Int, Int) -> Unit,
-    totalSpacingHeight: Dp
+    onMonthChange: (Int, Int) -> Unit
 ) {
     val monthStartDate = Calendar.getInstance().apply {
         clear()
@@ -311,9 +351,7 @@ fun SimpleCalendarView(
             time = monthStartDate.time
             add(Calendar.MONTH, 1)
         }
-        val nextMonth = newCalendar.get(Calendar.MONTH)
-        val nextYear = newCalendar.get(Calendar.YEAR)
-        onMonthChange(nextMonth, nextYear)
+        onMonthChange(newCalendar.get(Calendar.MONTH), newCalendar.get(Calendar.YEAR))
     }
 
     fun goToPreviousMonth() {
@@ -321,188 +359,129 @@ fun SimpleCalendarView(
             time = monthStartDate.time
             add(Calendar.MONTH, -1)
         }
-        val prevMonth = newCalendar.get(Calendar.MONTH)
-        val prevYear = newCalendar.get(Calendar.YEAR)
-        onMonthChange(prevMonth, prevYear)
+        onMonthChange(newCalendar.get(Calendar.MONTH), newCalendar.get(Calendar.YEAR))
     }
 
     val daysInMonth = monthStartDate.getActualMaximum(Calendar.DAY_OF_MONTH)
     val firstDayOfWeekSystem = Calendar.getInstance().firstDayOfWeek
     val firstDayOfWeekOfMonth = monthStartDate.get(Calendar.DAY_OF_WEEK)
-
     val monthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(monthStartDate.time)
-
     val emptyCells = (firstDayOfWeekOfMonth - firstDayOfWeekSystem + 7) % 7
-    val dayCellsData = remember(currentYear, currentMonth, emptyCells, daysInMonth) {
-        val cells = mutableListOf<CalendarDay?>()
-        repeat(emptyCells) { cells.add(null) }
-        for (day in 1..daysInMonth) {
+
+    val dayCellsData = remember(currentYear, currentMonth) {
+        (1..emptyCells).map { null } + (1..daysInMonth).map { day ->
             val dayCalendar = Calendar.getInstance().apply {
                 time = monthStartDate.time
-                add(Calendar.DAY_OF_MONTH, day - 1)
+                set(Calendar.DAY_OF_MONTH, day)
             }
-            cells.add(CalendarDay(day.toString(), dayCalendar.time))
+            CalendarDay(day.toString(), dayCalendar.time)
         }
-        cells
     }
-
-    Log.d(
-        "SimpleCalendarView",
-        "Month: $monthName, Days: $daysInMonth, Empty: $emptyCells, 1stDayOfMonthInWeek: $firstDayOfWeekOfMonth, System1stDay: $firstDayOfWeekSystem"
-    )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { goToPreviousMonth() }) {
+            IconButton(onClick = ::goToPreviousMonth) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Month")
             }
             Text(
                 text = monthName,
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 12.dp)
+                fontWeight = FontWeight.Bold
             )
-            IconButton(onClick = { goToNextMonth() }) {
+            IconButton(onClick = ::goToNextMonth) {
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month")
             }
         }
+        Spacer(Modifier.height(12.dp))
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
-            val dayFormatter = remember { SimpleDateFormat("E", Locale.getDefault()) }
-            val daysOfWeekHeader = remember(firstDayOfWeekSystem) {
-                val tempDisplayCal = Calendar.getInstance().apply {
-                    set(Calendar.DAY_OF_WEEK, firstDayOfWeekSystem)
-                }
-                List(7) {
-                    val dayName = dayFormatter.format(tempDisplayCal.time)
-                    tempDisplayCal.add(Calendar.DAY_OF_MONTH, 1)
-                    dayName
-                }
-            }
-            daysOfWeekHeader.forEach { dayName ->
+            val dayFormatter = SimpleDateFormat("E", Locale.getDefault())
+            val tempCal = Calendar.getInstance().apply { set(Calendar.DAY_OF_WEEK, firstDayOfWeekSystem) }
+            repeat(7) {
                 Text(
-                    text = dayName,
+                    text = dayFormatter.format(tempCal.time).take(1), // Single letter for day
                     style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center
                 )
+                tempCal.add(Calendar.DAY_OF_MONTH, 1)
             }
         }
-        Spacer(modifier = Modifier.height(8.dp)) // Vertical spacer
+        Spacer(modifier = Modifier.height(8.dp))
 
-        if (dayCellsData.isNotEmpty()) {
-            val numberOfRows = (dayCellsData.size + 6) / 7
-            val cellHeight = 48.dp
-            val gridVerticalSpacing = 4.dp // Spacing between rows in the grid
-
-            val actualRows = if (numberOfRows > 0) numberOfRows else 1
-            val totalCellsOnlyHeight = cellHeight * actualRows
-
-            val gridInternalVerticalSpacing = if (actualRows > 1) {
-                gridVerticalSpacing * (actualRows - 1)
-            } else {
-                0.dp
-            }
-            val gridHeight = totalCellsOnlyHeight + gridInternalVerticalSpacing
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(7),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(gridHeight), // Use the calculated gridHeight
-                verticalArrangement = Arrangement.spacedBy(gridVerticalSpacing),
-                horizontalArrangement = Arrangement.spacedBy(4.dp), // Spacing between columns
-                userScrollEnabled = false,
-            ) {
-                items(dayCellsData) { calendarDayData ->
-                    if (calendarDayData != null) {
-                        val isSelected = selectedDate?.let {
-                            val cal1 = Calendar.getInstance().apply { time = it }
-                            val cal2 = Calendar.getInstance().apply { time = calendarDayData.date }
-                            cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) && cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
-                        } ?: false
-
-                        val tasksForDay = tasks.count { task ->
-                            try {
-                                val taskDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.dateTime.substring(0, 10))
-                                taskDate?.toLocalDate() == calendarDayData.date.toLocalDate()
-                            } catch (e: Exception) {
-                                false
-                            }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(7),
+           
+            modifier = Modifier.height(260.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            userScrollEnabled = false
+        ) {
+            items(dayCellsData) { calendarDayData ->
+                if (calendarDayData != null) {
+                    val isSelected = selectedDate?.toLocalDate() == calendarDayData.date.toLocalDate()
+                    val tasksForDayCount = tasks.count { task ->
+                        try {
+                            task.dateTime.startsWith(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendarDayData.date))
+                        } catch (e: Exception) {
+                            false
                         }
-
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .aspectRatio(1f)
-                                .padding(2.dp)
-                                .border(
-                                    width = if (isSelected) 2.dp else 0.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                                .clickable { onDateClick(calendarDayData.date) }
-                        ) {
-                            Text(
-                                text = calendarDayData.dayNumberText,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            if (tasksForDay > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = 4.dp)
-                                        .size(16.dp)
-                                        .background(MaterialTheme.colorScheme.primary, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = tasksForDay.toString(),
-                                        color = Color.White,
-                                        fontSize = 10.sp
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        Box(modifier = Modifier.aspectRatio(1f)) // Empty cell
                     }
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .clip(CircleShape)
+                            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                            .clickable { onDateClick(calendarDayData.date) }
+                    ) {
+                        Text(
+                            text = calendarDayData.dayNumberText,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        if (tasksForDayCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 4.dp)
+                                    .size(6.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            )
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.aspectRatio(1f)) // Empty cell
                 }
             }
-        } else {
-            Text("Calendar data is unavailable.", modifier = Modifier.padding(16.dp))
-            Log.e("SimpleCalendarView", "Calendar data (dayCells) is unavailable or empty.")
         }
     }
 }
-
 
 
 @Composable
 fun TaskViewer(
     selectedDate: LocalDate,
     tasks: List<Task>,
-    onAddTaskClicked: () -> Unit, // Callback to open the add task dialog
-    onToggleTask: (Task) -> Unit // Callback to update a task's status
+    onAddTaskClicked: () -> Unit,
+    onToggleTask: (Task) -> Unit
 ) {
-    val dateFormatter = DateTimeFormatter.ofPattern("eeee, MMM d")
+    val dateFormatter = DateTimeFormatter.ofPattern("eeee, MMMM d")
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D2D))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column {
             Row(
@@ -512,36 +491,31 @@ fun TaskViewer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Text("Tasks for", fontSize = 14.sp, color = Color.LightGray)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Tasks for", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         selectedDate.format(dateFormatter),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
                 }
                 IconButton(
-                    onClick = { onAddTaskClicked() }, // Use the callback to show the dialog
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .size(40.dp),
-                    colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFF007AFF))
+                    onClick = onAddTaskClicked,
+                    modifier = Modifier.clip(CircleShape),
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Task", tint = Color.White)
+                    Icon(Icons.Default.Add, contentDescription = "Add Task", tint = MaterialTheme.colorScheme.onPrimary)
                 }
             }
 
-            Divider(color = Color(0xFF424242), thickness = 1.dp)
+            Divider()
 
             if (tasks.isNotEmpty()) {
-                // The LazyColumn no longer needs its own state. It just displays the tasks passed to it.
                 LazyColumn(
-                    modifier = Modifier.height(200.dp), // A fixed height for demonstration
+                    modifier = Modifier.heightIn(min = 100.dp, max = 250.dp),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-
                     items(tasks, key = { it.id }) { task ->
                         TaskItem(task = task, onToggle = { onToggleTask(task) })
                     }
@@ -558,27 +532,29 @@ fun TaskItem(task: Task, onToggle: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggle() }, // Uses the callback from the TaskViewer
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onToggle() }
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
             contentDescription = "Task Status",
-            tint = if (task.isCompleted) Color(0xFF34C759) else Color.Gray,
+            tint = if (task.isCompleted) MaterialTheme.colorScheme.primary else LocalContentColor.current.copy(alpha = 0.6f),
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column {
             Text(
-                text = task.description, // Displays the description from your Task
+                text = task.description,
                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-                color = if (task.isCompleted) Color.Gray else Color.White,
-                fontSize = 16.sp
+                color = if (task.isCompleted) LocalContentColor.current.copy(alpha = 0.5f) else LocalContentColor.current,
+                style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = task.dateTime, // Displays the dateTime from your Task
-                color = Color.Gray,
-                fontSize = 14.sp
+                text = task.dateTime, // Note: You may want to format this date/time string
+                color = LocalContentColor.current.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
@@ -596,13 +572,18 @@ fun EmptyState() {
         Icon(
             imageVector = Icons.Default.CalendarMonth,
             contentDescription = "No tasks",
-            tint = Color.Gray,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
             modifier = Modifier.size(48.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Text("No tasks for this day.", color = Color.LightGray, textAlign = TextAlign.Center)
-        Text("Enjoy your free time!", color = Color.Gray, textAlign = TextAlign.Center, fontSize = 12.sp)
+        Text(
+            "No tasks for this day.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+        )
+        Text(
+            "Enjoy your free time!",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
-
-
