@@ -28,14 +28,7 @@ fun NotesScreen(viewModel: MainViewModel) {
         topBar = {
             TopAppBar(
                 title = { Text("My Notes") },
-                actions = {
-                    TextButton(onClick = { viewModel.onBackToHome() }) {
-                        Text("Home")
-                    }
-                    TextButton(onClick = { viewModel.onNavigateToTaskLists() }) {
-                        Text("Tasks")
-                    }
-                }
+                actions = {}
             )
         },
         floatingActionButton = {

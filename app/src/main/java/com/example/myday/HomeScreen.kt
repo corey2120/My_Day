@@ -68,10 +68,9 @@ fun HomeScreen(viewModel: MainViewModel) {
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("My Day") },
-                actions = {
+                topBar = {
+                    TopAppBar(
+                        title = { },                actions = {
                     var showMenu by remember { mutableStateOf(false) }
 
                     IconButton(onClick = { showMenu = !showMenu }) {
@@ -85,6 +84,27 @@ fun HomeScreen(viewModel: MainViewModel) {
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Calendar") },
+                            onClick = {
+                                scope.launch { pagerState.animateScrollToPage(0) }
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Tasks") },
+                            onClick = {
+                                scope.launch { pagerState.animateScrollToPage(1) }
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Google Login") },
+                            onClick = {
+                                Log.d("HomeScreen", "Google Login clicked - Implement actual login logic here")
+                                showMenu = false
+                            }
+                        )
                         DropdownMenuItem(
                             text = { Text("Settings") },
                             onClick = {

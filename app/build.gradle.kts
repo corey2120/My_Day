@@ -88,6 +88,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation-layout:1.7.8")
     implementation("com.google.accompanist:accompanist-pager:0.32.0")
     implementation("com.google.accompanist:accompanist-pager-indicators:0.32.0")
+    implementation("androidx.core:core-splashscreen:1.0.1") // Added splash screen dependency
 
 
 }
