@@ -5,8 +5,10 @@ package com.example.myday
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -31,11 +33,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -44,8 +46,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import com.google.accompanist.pager.pagerTabIndicatorOffset
 import kotlinx.coroutines.CoroutineScope
+import com.example.myday.R
 
 // Helper functions to convert between legacy Date and modern LocalDate
 fun Date.toLocalDate(): LocalDate {
@@ -58,8 +60,8 @@ fun LocalDate.toDate(): Date {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: MainViewModel) {
-    val pagerState = rememberPagerState(pageCount = { 3 })
+fun HomeScreen(viewModel: MainViewModel, page: Int = 0) {
+    val pagerState = rememberPagerState(initialPage = page, pageCount = { 3 })
     val scope = rememberCoroutineScope()
     var showThemeDialog by remember { mutableStateOf(false) }
 
@@ -68,9 +70,11 @@ fun HomeScreen(viewModel: MainViewModel) {
     }
 
     Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { },                actions = {
+        topBar = {
+            TopAppBar(
+                title = { },
+                windowInsets = WindowInsets(top = 0.dp),
+                actions = {
                     var showMenu by remember { mutableStateOf(false) }
 
                     IconButton(onClick = { showMenu = !showMenu }) {
@@ -85,7 +89,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Calendar") },
+                            text = { Text("Home") },
                             onClick = {
                                 scope.launch { pagerState.animateScrollToPage(0) }
                                 showMenu = false
@@ -95,6 +99,13 @@ fun HomeScreen(viewModel: MainViewModel) {
                             text = { Text("Tasks") },
                             onClick = {
                                 scope.launch { pagerState.animateScrollToPage(1) }
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Notes") },
+                            onClick = {
+                                scope.launch { pagerState.animateScrollToPage(2) }
                                 showMenu = false
                             }
                         )
@@ -112,57 +123,46 @@ fun HomeScreen(viewModel: MainViewModel) {
                                 showMenu = false
                             }
                         )
-                        DropdownMenuItem(
-                            text = { Text("View Notes") },
-                            onClick = {
-                                scope.launch { pagerState.animateScrollToPage(2) }
-                                showMenu = false
-                            }
-                        )
                     }
                 }
             )
+        },
+        bottomBar = {
+            NavigationBar {
+                val items = listOf("Calendar", "Tasks", "Notes")
+                val icons = listOf(Icons.Default.CalendarMonth, Icons.Default.CheckCircle)
+                items.forEachIndexed { index, item ->
+                    NavigationBarItem(
+                        icon = { 
+                            if (item == "Notes") {
+                                Icon(painter = painterResource(id = R.drawable.notesicon), contentDescription = item, modifier = Modifier.size(24.dp))
+                            } else {
+                                Icon(icons[index], contentDescription = item) 
+                            }
+                        },
+                        label = { Text(item) },
+                        selected = pagerState.currentPage == index,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } }
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            Tabs(pagerState = pagerState, scope = scope)
             Pager(pagerState = pagerState, viewModel = viewModel)
         }
     }
 }
 
-@Composable
-fun Tabs(pagerState: PagerState, scope: CoroutineScope) {    val titles = listOf("Calendar", "Tasks", "Notes")
 
-    TabRow(
-        selectedTabIndex = pagerState.currentPage,indicator = { tabPositions ->
-            // Check if the tabPositions list is not empty to avoid an index out of bounds exception.
-            if (tabPositions.isNotEmpty()) {
-                TabRowDefaults.Indicator(
-                    // Correctly access the TabPosition using the current page index.
-                    Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    ) {
-        titles.forEachIndexed { index, title ->
-            Tab(
-                text = { Text(title) },
-                selected = pagerState.currentPage == index,
-                onClick = { scope.launch { pagerState.animateScrollToPage(index) } }
-            )
-        }
-    }
-}
 
 @Composable
 fun Pager(pagerState: PagerState, viewModel: MainViewModel) {
     HorizontalPager(state = pagerState) { page ->
         when (page) {
             0 -> CalendarScreen(viewModel = viewModel)
-            1 -> TaskListsScreen(viewModel = viewModel)
-            2 -> NotesScreen(viewModel = viewModel)
+            1 -> TaskListsScreen(viewModel = viewModel, showTopBar = false)
+            2 -> NotesScreen(viewModel = viewModel, showTopBar = false)
         }
     }
 }
@@ -442,14 +442,15 @@ fun SimpleCalendarView(
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
            
-            modifier = Modifier.height(260.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.height(300.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             userScrollEnabled = false
         ) {
             items(dayCellsData) { calendarDayData ->
                 if (calendarDayData != null) {
                     val isSelected = selectedDate?.toLocalDate() == calendarDayData.date.toLocalDate()
+                    val isCurrentDay = LocalDate.now() == calendarDayData.date.toLocalDate()
                     val tasksForDayCount = tasks.count { task ->
                         try {
                             task.dateTime.startsWith(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendarDayData.date))
@@ -464,6 +465,7 @@ fun SimpleCalendarView(
                             .aspectRatio(1f)
                             .clip(CircleShape)
                             .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                            .border(if (isCurrentDay) 1.dp else 0.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             .clickable { onDateClick(calendarDayData.date) }
                     ) {
                         Text(
@@ -475,7 +477,7 @@ fun SimpleCalendarView(
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
                                     .padding(bottom = 4.dp)
-                                    .size(6.dp)
+                                    .size(8.dp)
                                     .background(MaterialTheme.colorScheme.primary, CircleShape)
                             )
                         }
@@ -499,9 +501,10 @@ fun TaskViewer(
     val dateFormatter = DateTimeFormatter.ofPattern("eeee, MMMM d")
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column {
             Row(
@@ -519,10 +522,10 @@ fun TaskViewer(
                         fontWeight = FontWeight.Bold
                     )
                 }
-                IconButton(
+                FloatingActionButton(
                     onClick = onAddTaskClicked,
                     modifier = Modifier.clip(CircleShape),
-                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    containerColor = MaterialTheme.colorScheme.primary
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Task", tint = MaterialTheme.colorScheme.onPrimary)
                 }
@@ -553,6 +556,7 @@ fun TaskItem(task: Task, onToggle: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
+            .background(if (task.isCompleted) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
             .clickable { onToggle() }
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -573,7 +577,7 @@ fun TaskItem(task: Task, onToggle: () -> Unit) {
             )
             Text(
                 text = task.dateTime, // Note: You may want to format this date/time string
-                color = LocalContentColor.current.copy(alpha = 0.7f),
+                color = if (task.isCompleted) LocalContentColor.current.copy(alpha = 0.5f) else LocalContentColor.current.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.bodySmall
             )
         }

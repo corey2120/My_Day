@@ -5,12 +5,15 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.material3.FloatingActionButtonDefaults.elevation
@@ -21,15 +24,23 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun NotesScreen(viewModel: MainViewModel) {
+fun NotesScreen(viewModel: MainViewModel, showTopBar: Boolean = true) {
     val notes by viewModel.notes.collectAsState()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("My Notes") },
-                actions = {}
-            )
+            if (showTopBar) {
+                TopAppBar(
+                    title = { Text("My Notes") },
+                    windowInsets = WindowInsets(top = 0.dp),
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.navigateToHome() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
+                        }
+                    },
+                    actions = {}
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { viewModel.onNavigateToNoteDetail(null) }) {

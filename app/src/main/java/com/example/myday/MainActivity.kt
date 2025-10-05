@@ -20,7 +20,7 @@ class MainActivity : ComponentActivity() {
             val themeName by viewModel.themeName.collectAsState()
             MyDayTheme(themeName = themeName) {
                 when (val screen = viewModel.currentScreen) {
-                    is Screen.Home -> HomeScreen(viewModel)
+                    is Screen.Home -> HomeScreen(viewModel, screen.page)
                     is Screen.TaskLists -> TaskListsScreen(viewModel)
                     is Screen.Tasks -> TasksScreen(viewModel, screen.listId)
                     is Screen.Notes -> NotesScreen(viewModel)

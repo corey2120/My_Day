@@ -27,7 +27,7 @@ import kotlinx.coroutines.NonCancellable.isCompleted
 import javax.inject.Inject
 
 sealed class Screen {
-    object Home : Screen()
+    data class Home(val page: Int = 0) : Screen()
     object TaskLists : Screen()
     data class Tasks(val listId: String) : Screen()
     object Notes : Screen()
@@ -41,7 +41,7 @@ class MainViewModel @Inject constructor(
     private val NoteDao: NoteDao,
 ) : ViewModel() {
 
-    var currentScreen by mutableStateOf<Screen>(Screen.Home)
+    var currentScreen by mutableStateOf<Screen>(Screen.Home(0))
         private set
 
     val themeName: StateFlow<String> = settingsManager.theme.stateIn(
@@ -143,8 +143,8 @@ class MainViewModel @Inject constructor(
     }
 
 
-    fun onBackToHome() {
-        currentScreen = Screen.Home
+    fun navigateToHome(page: Int = 0) {
+        currentScreen = Screen.Home(page)
     }
 
     fun toggleTaskCompleted(taskId: String) {
@@ -276,5 +276,5 @@ class MainViewModel @Inject constructor(
     }
 
     fun onBackToNotes() {
-        currentScreen = Screen.Notes
+        navigateToHome(2)
     }}

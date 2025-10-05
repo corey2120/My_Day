@@ -1,8 +1,9 @@
 package com.example.myday
 
-import androidx.compose.foundation.clickable
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,7 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun TaskListsScreen(viewModel: MainViewModel) {
+fun TaskListsScreen(viewModel: MainViewModel, showTopBar: Boolean = true) {
     val taskLists: List<TaskList> by viewModel.taskLists.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
@@ -50,14 +50,17 @@ fun TaskListsScreen(viewModel: MainViewModel) {
 
     Scaffold(
         topBar = { 
-            TopAppBar(
-                title = { Text("My Task Lists") },
-                navigationIcon = {
-                    IconButton(onClick = { viewModel.onBackToHome() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
+            if (showTopBar) {
+                TopAppBar(
+                    title = { Text("My Task Lists") },
+                    windowInsets = WindowInsets(top = 0.dp),
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.navigateToHome() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
+                        }
                     }
-                }
-            )
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showDialog = true }) {
