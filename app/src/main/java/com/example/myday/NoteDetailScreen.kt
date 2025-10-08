@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.flowOf
 @Composable
 fun NoteDetailScreen(viewModel: MainViewModel, noteId: String?, onBack: () -> Unit) {
     val existingNote by remember(noteId) {
-        if (noteId != null && noteId != "new") {
+        if (!noteId.isNullOrBlank()) {
             viewModel.getNoteFlowById(noteId)
         } else flowOf(null)
     }.collectAsState(initial = null)
@@ -41,7 +41,7 @@ fun NoteDetailScreen(viewModel: MainViewModel, noteId: String?, onBack: () -> Un
             TopAppBar(
                 title = {
                     Text(
-                        if (noteId == "new") "New Note" else "Edit Note",
+                        if (noteId.isNullOrBlank()) "New Note" else "Edit Note",
                         color = textColor
                     )
                 },
@@ -56,7 +56,7 @@ fun NoteDetailScreen(viewModel: MainViewModel, noteId: String?, onBack: () -> Un
                 },
                 actions = {
                     IconButton(onClick = {
-                        if (noteId == "new") {
+                        if (noteId.isNullOrBlank()) {
                             viewModel.addNote(title, content)
                         } else {
                             existingNote?.let { noteToUpdate ->

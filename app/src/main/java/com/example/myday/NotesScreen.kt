@@ -38,16 +38,26 @@ fun NotesScreen(
 ) {
     val notes by viewModel.notes.collectAsState()
 
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(2),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalItemSpacing = 8.dp
-    ) {
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { onNoteClicked("") }) {
+                Icon(Icons.Default.Add, contentDescription = "Add New Note")
+            }
         }
-        items(notes) { note ->
-            NoteItem(note = note, onClick = { onNoteClicked(note.id) }, onDelete = { viewModel.deleteNote(note) })
+    ) { paddingValues ->
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalItemSpacing = 8.dp,
+            contentPadding = paddingValues,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            items(notes) { note ->
+                NoteItem(note = note, onClick = { onNoteClicked(note.id) }, onDelete = { viewModel.deleteNote(note) })
+            }
         }
     }
 }

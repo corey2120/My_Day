@@ -131,7 +131,20 @@ fun HomeScreen(viewModel: MainViewModel) {
                         composable("notes_list") {
                             NotesScreen(
                                 viewModel = viewModel,
-                                onNoteClicked = { noteId -> notesNavController.navigate("note_detail/$noteId") }
+                                onNoteClicked = { noteId ->
+                                    if (noteId.isBlank()) {
+                                        notesNavController.navigate("note_detail_new")
+                                    } else {
+                                        notesNavController.navigate("note_detail/$noteId")
+                                    }
+                                }
+                            )
+                        }
+                        composable("note_detail_new") {
+                            NoteDetailScreen(
+                                viewModel = viewModel,
+                                noteId = null,
+                                onBack = { notesNavController.popBackStack() }
                             )
                         }
                         composable("note_detail/{noteId}") { backStackEntry ->
