@@ -19,8 +19,14 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -58,12 +64,29 @@ fun LocalDate.toDate(): Date {
     return Date.from(this.atStartOfDay(ZoneId.systemDefault()).toInstant())
 }
 
+sealed class TasksScreen {
+    object TaskLists : TasksScreen()
+    data class Tasks(val listId: String) : TasksScreen()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
+@UnstableApi
 @Composable
-fun HomeScreen(viewModel: MainViewModel, page: Int = 0) {
-    val pagerState = rememberPagerState(initialPage = page, pageCount = { 3 })
+fun HomeScreen(viewModel: MainViewModel) {
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
     val scope = rememberCoroutineScope()
+    var currentTasksScreen by remember { mutableStateOf<TasksScreen>(TasksScreen.TaskLists) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    val notesNavController = rememberNavController()
+
+    val showTasksBackButton by remember {
+        derivedStateOf { currentTasksScreen is TasksScreen.Tasks }
+    }
+
+    val onTasksBack: () -> Unit = { currentTasksScreen = TasksScreen.TaskLists }
+
+    var showNotesBackButton by remember { mutableStateOf(false) }
+    val onNotesBack: () -> Unit = { notesNavController.popBackStack() }
 
     if (showThemeDialog) {
         ThemeSwitcherDialog(viewModel = viewModel, onDismiss = { showThemeDialog = false })
@@ -72,7 +95,30 @@ fun HomeScreen(viewModel: MainViewModel, page: Int = 0) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { },
+                title = { 
+                    when (val screen = currentTasksScreen) {
+                        is TasksScreen.TaskLists -> Text("Task Lists")
+                        is TasksScreen.Tasks -> {
+                            val listName = viewModel.taskLists.collectAsState().value.find { it.id == screen.listId }?.name ?: "Tasks"
+                            Text(listName)
+                        }
+                    }
+                },
+                navigationIcon = {
+                    Log.d("HomeScreen", "navigationIcon recomposing: showTasksBackButton=$showTasksBackButton, showNotesBackButton=$showNotesBackButton")
+                    if (showTasksBackButton) {
+                        IconButton(onClick = onTasksBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    } else if (showNotesBackButton) {
+                        IconButton(onClick = onNotesBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    } else {
+                        // Placeholder for when no back button is needed
+                        Spacer(modifier = Modifier.width(48.dp)) // Occupy space to keep alignment
+                    }
+                },
                 windowInsets = WindowInsets(top = 0.dp),
                 actions = {
                     var showMenu by remember { mutableStateOf(false) }
@@ -135,7 +181,7 @@ fun HomeScreen(viewModel: MainViewModel, page: Int = 0) {
                     NavigationBarItem(
                         icon = { 
                             if (item == "Notes") {
-                                Icon(painter = painterResource(id = R.drawable.notesicon), contentDescription = item, modifier = Modifier.size(24.dp))
+                                Icon(painter = painterResource(id = R.drawable.notesicon), contentDescription = item, modifier = Modifier.size(24.dp)) 
                             } else {
                                 Icon(icons[index], contentDescription = item) 
                             }
@@ -146,130 +192,59 @@ fun HomeScreen(viewModel: MainViewModel, page: Int = 0) {
                     )
                 }
             }
+        },
+        floatingActionButton = {
+            if (pagerState.currentPage == 2) { // Notes screen
+                FloatingActionButton(
+                    onClick = { notesNavController.navigate("note_detail/new") },
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Note", tint = MaterialTheme.colorScheme.onPrimary)
+                }
+            }
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
-            Pager(pagerState = pagerState, viewModel = viewModel)
-        }
-    }
-}
-
-
-
-@Composable
-fun Pager(pagerState: PagerState, viewModel: MainViewModel) {
-    HorizontalPager(state = pagerState) { page ->
-        when (page) {
-            0 -> CalendarScreen(viewModel = viewModel)
-            1 -> TaskListsScreen(viewModel = viewModel, showTopBar = false)
-            2 -> NotesScreen(viewModel = viewModel, showTopBar = false)
-        }
-    }
-}
-
-@Composable
-fun CalendarScreen(viewModel: MainViewModel) {
-    val tasks: List<Task> by viewModel.tasks.collectAsState()
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var currentMonth by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MONTH)) }
-    var currentYear by remember { mutableStateOf(Calendar.getInstance().get(Calendar.YEAR)) }
-    var showAddTaskDialog by remember { mutableStateOf(false) }
-
-    if (showAddTaskDialog) {
-        AddTaskFromHomeDialog(
-            viewModel = viewModel,
-            onDismiss = { showAddTaskDialog = false },
-            selectedDate = selectedDate.toDate()
-        )
-    }
-
-    val tasksForSelectedDate by remember(tasks, selectedDate) {
-        mutableStateOf(tasks.filter { task ->
-            try {
-                // Assuming task.dateTime is "yyyy-MM-dd HH:mm:ss"
-                val taskDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.dateTime.substring(0, 10))
-                taskDate?.toLocalDate() == selectedDate
-            } catch (e: Exception) {
-                false
-            }
-        })
-    }
-
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 8.dp, bottom = 16.dp)
-            ) {
-                Text(
-                    text = "My Calendar",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                SimpleCalendarView(
-                    tasks = tasks,
-                    selectedDate = selectedDate.toDate(),
-                    onDateClick = { date ->
-                        selectedDate = date.toLocalDate()
-                    },
-                    currentMonth = currentMonth,
-                    currentYear = currentYear,
-                    onMonthChange = { month, year ->
-                        currentMonth = month
-                        currentYear = year
+        HorizontalPager(state = pagerState) { page ->
+            when (page) {
+                0 -> CalendarScreen(viewModel = viewModel, paddingValues = paddingValues)
+                1 -> {
+                    when (val screen = currentTasksScreen) {
+                        is TasksScreen.TaskLists -> TaskListsScreen(viewModel = viewModel, onTaskListClicked = { listId -> currentTasksScreen = TasksScreen.Tasks(listId) }, onBack = {}, paddingValues = paddingValues)
+                        is TasksScreen.Tasks -> TasksScreen(viewModel = viewModel, listId = screen.listId, onBack = { currentTasksScreen = TasksScreen.TaskLists }, paddingValues = paddingValues)
                     }
-                )
-            }
-        }
-        item {
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                TaskViewer(
-                    selectedDate = selectedDate,
-                    tasks = tasksForSelectedDate,
-                    onAddTaskClicked = { showAddTaskDialog = true },
-                    onToggleTask = { task ->
-                        viewModel.toggleTaskCompleted(task.id)
+                }
+                2 -> {
+                    val navBackStackEntry by notesNavController.currentBackStackEntryAsState()
+                    LaunchedEffect(navBackStackEntry) {
+                        showNotesBackButton = notesNavController.previousBackStackEntry != null
+                        Log.d("HomeScreen", "Notes LaunchedEffect: navBackStackEntry=$navBackStackEntry, showNotesBackButton=$showNotesBackButton")
                     }
-                )
+                    NavHost(notesNavController, startDestination = "notes_list") {
+                        composable("notes_list") {
+                            NotesScreen(
+                                viewModel = viewModel,
+                                onNoteClicked = { noteId -> notesNavController.navigate("note_detail/$noteId") },
+                                paddingValues = paddingValues
+                            )
+                        }
+                        composable("note_detail/{noteId}") { backStackEntry ->
+                            val noteId = backStackEntry.arguments?.getString("noteId")
+                            NoteDetailScreen(
+                                viewModel = viewModel,
+                                noteId = noteId,
+                                onBack = { notesNavController.popBackStack() }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-/**
- * A placeholder screen to display a list of all tasks.
- */
-@Composable
-fun TasksScreen(viewModel: MainViewModel) {
-    val tasks by viewModel.tasks.collectAsState()
 
-    if (tasks.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("No tasks yet. Add one from the calendar!")
-        }
-    } else {
-        LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item {
-                Text(
-                    "All Tasks",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-            items(tasks, key = { it.id }) { task ->
-                TaskItem(task = task, onToggle = { viewModel.toggleTaskCompleted(task.id) })
-            }
-        }
-    }
-}
+
+
 
 @Composable
 private fun ThemeSwitcherDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
@@ -609,5 +584,76 @@ fun EmptyState() {
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             style = MaterialTheme.typography.bodySmall
         )
+    }
+}
+
+@Composable
+fun CalendarScreen(viewModel: MainViewModel, paddingValues: PaddingValues) {
+    val tasks: List<Task> by viewModel.tasks.collectAsState()
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var currentMonth by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MONTH)) }
+    var currentYear by remember { mutableStateOf(Calendar.getInstance().get(Calendar.YEAR)) }
+    var showAddTaskDialog by remember { mutableStateOf(false) }
+
+    if (showAddTaskDialog) {
+        AddTaskFromHomeDialog(
+            viewModel = viewModel,
+            onDismiss = { showAddTaskDialog = false },
+            selectedDate = selectedDate.toDate()
+        )
+    }
+
+    val tasksForSelectedDate by remember(tasks, selectedDate) {
+        mutableStateOf(tasks.filter { task ->
+            try {
+                // Assuming task.dateTime is "yyyy-MM-dd HH:mm:ss"
+                val taskDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(task.dateTime.substring(0, 10))
+                taskDate?.toLocalDate() == selectedDate
+            } catch (e: Exception) {
+                false
+            }
+        })
+    }
+
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = paddingValues) {
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 8.dp, bottom = 16.dp)
+            ) {
+                Text(
+                    text = "My Calendar",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                SimpleCalendarView(
+                    tasks = tasks,
+                    selectedDate = selectedDate.toDate(),
+                    onDateClick = { date ->
+                        selectedDate = date.toLocalDate()
+                    },
+                    currentMonth = currentMonth,
+                    currentYear = currentYear,
+                    onMonthChange = { month, year ->
+                        currentMonth = month
+                        currentYear = year
+                    }
+                )
+            }
+        }
+        item {
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                TaskViewer(
+                    selectedDate = selectedDate,
+                    tasks = tasksForSelectedDate,
+                    onAddTaskClicked = { showAddTaskDialog = true },
+                    onToggleTask = { task ->
+                        viewModel.toggleTaskCompleted(task.id)
+                    }
+                )
+            }
+        }
     }
 }

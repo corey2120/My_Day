@@ -1,6 +1,8 @@
 package com.example.myday
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -9,75 +11,127 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NoteDetailScreen(viewModel: MainViewModel, note: Note?) {
-    var title by remember { mutableStateOf(note?.title ?: "") }
-    var content by remember { mutableStateOf(note?.content ?: "") }
-    val backgroundColor = note?.color?.let { Color(it) } ?: Color(0xFFFFFFFF)
-    val textColor = getTextColorForBackground(MaterialTheme.colorScheme.background)
+fun NoteDetailScreen(viewModel: MainViewModel, noteId: String?, onBack: () -> Unit) {
+    val existingNote by remember(noteId) {
+        if (noteId != null && noteId != "new") {
+            viewModel.getNoteFlowById(noteId)
+        } else flowOf(null)
+    }.collectAsState(initial = null)
+
+    var title by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf("") }
+
+    LaunchedEffect(existingNote) {
+        title = existingNote?.title ?: ""
+        content = existingNote?.content ?: ""
+    }
+
+    val backgroundColor =
+        existingNote?.color?.let { Color(it) } ?: MaterialTheme.colorScheme.surface
+    val textColor = getTextColorForBackground(backgroundColor)
+
+    Log.d("NoteDetailScreen", "backgroundColor: $backgroundColor, textColor: $textColor")
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (note == null) "New Note" else "Edit Note", color = getTextColorForBackground(backgroundColor)) },
+                title = {
+                    Text(
+                        if (noteId == "new") "New Note" else "Edit Note",
+                        color = textColor
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.onBackToNotes() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = getTextColorForBackground(backgroundColor))
+                    IconButton(onClick = { onBack() }) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = textColor
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = {
-                        if (note == null) {
+                        if (noteId == "new") {
                             viewModel.addNote(title, content)
                         } else {
-                            viewModel.updateNote(note.copy(title = title, content = content))
+                            existingNote?.let { noteToUpdate ->
+                                viewModel.updateNote(
+                                    noteToUpdate.copy(
+                                        title = title,
+                                        content = content
+                                    )
+                                )
+                            }
                         }
-                        viewModel.onBackToNotes()
+                        onBack()
                     }) {
-                        Icon(Icons.Default.Check, contentDescription = "Save Note", tint = getTextColorForBackground(backgroundColor))
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Save Note",
+                            tint = getTextColorForBackground(backgroundColor)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor)
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = backgroundColor
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            TextField(
-                value = title,
-                onValueChange = { title = it },
-                placeholder = { Text("Title", color = textColor.copy(alpha = 0.5f)) },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.headlineMedium.copy(color = textColor),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                )
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            TextField(
-                value = content,
-                onValueChange = { content = it },
-                placeholder = { Text("Content", color = textColor.copy(alpha = 0.5f)) },
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                )
-            )
+                            TextField(
+                                value = title,
+                                onValueChange = { title = it },
+                                placeholder = { Text("Title", color = textColor.copy(alpha = 0.7f)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.headlineMedium,
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    focusedTextColor = textColor,
+                                    unfocusedTextColor = textColor,
+                                    disabledTextColor = textColor,
+                                    errorTextColor = textColor,
+                                    cursorColor = textColor,
+                                    selectionColors = TextSelectionColors(
+                                        handleColor = textColor,
+                                        backgroundColor = textColor.copy(alpha = 0.4f)
+                                    )
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            TextField(
+                                value = content,
+                                onValueChange = { content = it },
+                                placeholder = { Text("Content", color = textColor.copy(alpha = 0.5f)) },
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                textStyle = MaterialTheme.typography.bodyLarge,
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    focusedTextColor = textColor,
+                                    unfocusedTextColor = textColor,
+                                    disabledTextColor = textColor,
+                                    errorTextColor = textColor,
+                                    cursorColor = textColor,
+                                    selectionColors = TextSelectionColors(handleColor = textColor, backgroundColor = textColor.copy(alpha = 0.4f))
+                                )
+                            )            }
         }
     }
-}
+
+

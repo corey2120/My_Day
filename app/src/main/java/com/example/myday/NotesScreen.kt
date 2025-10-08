@@ -4,8 +4,16 @@ import android.R.attr.onClick
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -24,39 +32,25 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun NotesScreen(viewModel: MainViewModel, showTopBar: Boolean = true) {
+fun NotesScreen(
+    viewModel: MainViewModel,
+    onNoteClicked: (String) -> Unit,
+    paddingValues: PaddingValues
+) {
     val notes by viewModel.notes.collectAsState()
 
-    Scaffold(
-        topBar = {
-            if (showTopBar) {
-                TopAppBar(
-                    title = { Text("My Notes") },
-                    windowInsets = WindowInsets(top = 0.dp),
-                    navigationIcon = {
-                        IconButton(onClick = { viewModel.navigateToHome() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
-                        }
-                    },
-                    actions = {}
-                )
-            }
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { viewModel.onNavigateToNoteDetail(null) }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Note")
-            }
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2),
+        modifier = Modifier.padding(top = 56.dp),
+        contentPadding = paddingValues,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalItemSpacing = 8.dp
+    ) {
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
         }
-    ) { paddingValues ->
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Fixed(2),
-            modifier = Modifier.padding(paddingValues).padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalItemSpacing = 8.dp
-        ) {
-            items(notes) { note ->
-                NoteItem(note = note, onClick = { viewModel.onNavigateToNoteDetail(note) }, onDelete = { viewModel.deleteNote(note) })
-            }
+        items(notes) { note ->
+            NoteItem(note = note, onClick = { onNoteClicked(note.id) }, onDelete = { viewModel.deleteNote(note) })
         }
     }
 }

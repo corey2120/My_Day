@@ -1,6 +1,7 @@
 package com.example.myday
 
 import android.Manifest
+import android.R.attr.text
 import android.app.Activity
 import android.content.Intent
 import android.speech.RecognizerIntent
@@ -8,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,18 +18,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,18 +41,22 @@ fun PriorityIndicator(priority: Priority, onClick: () -> Unit) {
         Priority.NONE -> Color.Transparent
     }
 
-    Box(
-        modifier = Modifier
-            .size(24.dp)
-            .clip(CircleShape)
-            .background(color)
-            .clickable(onClick = onClick)
+    Box(modifier = Modifier
+        .size(24.dp)
+        .clip(CircleShape)
+        .background(color)
+        .clickable(onClick = onClick)
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun TasksScreen(viewModel: MainViewModel, listId: String) {
+fun TasksScreen(
+    viewModel: MainViewModel,
+    listId: String,
+    onBack: () -> Unit,
+    paddingValues: PaddingValues
+) {
     val tasks: List<Task> by viewModel.tasks.collectAsState()
     val taskLists: List<TaskList> by viewModel.taskLists.collectAsState()
 
@@ -64,7 +64,6 @@ fun TasksScreen(viewModel: MainViewModel, listId: String) {
     val listName = taskLists.find { it.id == listId }?.name ?: "Tasks"
 
     var showTaskDialog by remember { mutableStateOf(false) }
-    var newTaskDescription by remember { mutableStateOf("") }
 
     var selectedTask by remember { mutableStateOf<Task?>(null) }
     var showEditOptionsDialog by remember { mutableStateOf(false) }
@@ -97,41 +96,47 @@ fun TasksScreen(viewModel: MainViewModel, listId: String) {
         }
     }
 
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(listName) },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.onBackToTaskLists() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 }
             )
         },
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                FloatingActionButton(
-                    onClick = { showTaskDialog = true },
-                    modifier = Modifier.padding(bottom = 8.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add task manually")
+            Column {
+                FloatingActionButton(onClick = { showTaskDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Task")
                 }
-                FloatingActionButton(onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
-                    Icon(Icons.Default.Mic, contentDescription = "Add task by voice")
+                Spacer(modifier = Modifier.height(16.dp))
+                FloatingActionButton(
+                    onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                ) {
+                    Icon(Icons.Default.Mic, contentDescription = "Speak Task")
                 }
             }
         }
-    ) { paddingValues ->
-        LazyColumn(modifier = Modifier.padding(paddingValues)) {
+    ) { innerPadding ->
+
+        LazyColumn(
+            modifier = Modifier.padding(innerPadding)
+        ) {
             items(tasksForList) { task ->
-                Box(
-                    modifier = Modifier.combinedClickable(
-                        onClick = { viewModel.toggleTaskCompleted(task.id) },
-                        onLongClick = {
-                            selectedTask = task
-                            showEditOptionsDialog = true
-                        }
-                    )
+                Box(modifier = Modifier.combinedClickable(
+                    onClick = { viewModel.toggleTaskCompleted(task.id) },
+                    onLongClick = {
+                        selectedTask = task
+                        showEditOptionsDialog = true
+                    }
+                )
                 ) {
                     Row(
                         modifier = Modifier
@@ -153,11 +158,13 @@ fun TasksScreen(viewModel: MainViewModel, listId: String) {
                                 text = task.description,
                                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
                             )
-                            Text(
-                                text = task.dateTime,
-                                style = MaterialTheme.typography.bodySmall,
-                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                            )
+                            if (task.dateTime.isNotEmpty()) {
+                                Text(
+                                    text = task.dateTime,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                                )
+                            }
                         }
                         IconButton(onClick = {
                             selectedTask = task
@@ -170,6 +177,7 @@ fun TasksScreen(viewModel: MainViewModel, listId: String) {
             }
         }
     }
+
 
     if (showTaskDialog) {
         AddTaskDialog(
@@ -238,6 +246,8 @@ fun TasksScreen(viewModel: MainViewModel, listId: String) {
         }
     }
 }
+
+
 
 @Composable
 private fun AddTaskDialog(onDismiss: () -> Unit, onAddTask: (String) -> Unit) {
@@ -332,6 +342,7 @@ private fun RenameTaskDialog(
             Button(
                 onClick = {
                     onRename(newDescription)
+                    onDismiss() // Dismiss after renaming
                 }
             ) {
                 Text("Rename")
@@ -375,6 +386,7 @@ private fun EditTaskDialog(
             Button(
                 onClick = {
                     onSave(newDescription, newDateTime)
+                    onDismiss()
                 }
             ) {
                 Text("Save")
@@ -387,7 +399,6 @@ private fun EditTaskDialog(
         }
     )
 }
-
 @Composable
 private fun MoveTaskDialog(
     viewModel: MainViewModel,
@@ -395,27 +406,26 @@ private fun MoveTaskDialog(
     onDismiss: () -> Unit
 ) {
     val taskLists by viewModel.taskLists.collectAsState()
+    val otherLists = taskLists.filter { it.id != task.listId }
+
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Move Task") },
         text = {
-            Column {
-                Text("Select a new list for this task:")
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyColumn {
-                    items(taskLists) { list ->
-                        Text(
-                            text = list.name,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.moveTask(task.id, list.id)
-                                    onDismiss()
-                                }
-                                .padding(vertical = 12.dp)
-                        )
-                    }
+
+            LazyColumn {
+                items(otherLists) { list ->
+                    Text(
+                        text = list.name,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.moveTask(task.id, list.id)
+                                onDismiss()
+                            }
+                            .padding(vertical = 12.dp)
+                    )
                 }
             }
         },

@@ -24,15 +24,10 @@ import androidx.compose.runtime.snapshotFlow
 
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.NonCancellable.isCompleted
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-sealed class Screen {
-    data class Home(val page: Int = 0) : Screen()
-    object TaskLists : Screen()
-    data class Tasks(val listId: String) : Screen()
-    object Notes : Screen()
-    data class NoteDetail(val note: Note?) : Screen()
-}
+
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -40,9 +35,6 @@ class MainViewModel @Inject constructor(
     private val taskDao: TaskDao,
     private val NoteDao: NoteDao,
 ) : ViewModel() {
-
-    var currentScreen by mutableStateOf<Screen>(Screen.Home(0))
-        private set
 
     val themeName: StateFlow<String> = settingsManager.theme.stateIn(
         scope = viewModelScope,
@@ -130,22 +122,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun onTaskListClicked(listId: String) {
-        currentScreen = Screen.Tasks(listId)
-    }
 
-    fun onBackToTaskLists() {
-        currentScreen = Screen.TaskLists
-    }
-
-    fun onNavigateToTaskLists() {
-        currentScreen = Screen.TaskLists
-    }
-
-
-    fun navigateToHome(page: Int = 0) {
-        currentScreen = Screen.Home(page)
-    }
 
     fun toggleTaskCompleted(taskId: String) {
         viewModelScope.launch {
@@ -227,7 +204,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val task = tasks.value.find { it.id == taskId }
-                task?.let {
+                task?.let { 
                     taskDao.updateTask(it.copy(listId = newListId))
                 }
             }
@@ -267,14 +244,14 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun onNavigationToNotes() {
-        currentScreen = Screen.Notes
+    fun getNoteById(noteId: String): Note? {
+        return notes.value.find { it.id == noteId }
     }
 
-    fun onNavigateToNoteDetail(note: Note?) {
-        currentScreen = Screen.NoteDetail(note)
+    fun getNoteFlowById(noteId: String): Flow<Note?> {
+        return NoteDao.getNoteByIdFlow(noteId)
     }
 
-    fun onBackToNotes() {
-        navigateToHome(2)
-    }}
+
+}
+

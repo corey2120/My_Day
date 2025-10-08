@@ -1,20 +1,22 @@
 package com.example.myday
 
 
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -22,22 +24,23 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.unit.dp
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskListsScreen(viewModel: MainViewModel, showTopBar: Boolean = true) {
+fun TaskListsScreen(
+    viewModel: MainViewModel,
+    onTaskListClicked: (String) -> Unit,
+    onBack: () -> Unit,
+    paddingValues: PaddingValues
+) {
     val taskLists: List<TaskList> by viewModel.taskLists.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
@@ -49,30 +52,29 @@ fun TaskListsScreen(viewModel: MainViewModel, showTopBar: Boolean = true) {
     var showEditTaskListDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { 
-            if (showTopBar) {
-                TopAppBar(
-                    title = { Text("My Task Lists") },
-                    windowInsets = WindowInsets(top = 0.dp),
-                    navigationIcon = {
-                        IconButton(onClick = { viewModel.navigateToHome() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
-                        }
+        topBar = {
+            TopAppBar(
+                title = { Text("Task Lists") },
+                navigationIcon = {
+
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
-                )
-            }
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Create new list")
-            }
+                }
+            )
         }
-    ) { paddingValues ->
-        LazyColumn(modifier = Modifier.padding(paddingValues)) {
+    ){ innerPadding ->
+                LazyColumn(contentPadding = paddingValues) {
+            item {
+                Spacer(modifier = Modifier.height(56.dp)) // Height of TopAppBar
+            }
             items(taskLists) { taskList ->
                 Box(
                     modifier = Modifier.combinedClickable(
-                        onClick = { viewModel.onTaskListClicked(taskList.id) },
+                        onClick = { onTaskListClicked(taskList.id) },
                         onLongClick = {
                             selectedTaskList = taskList
                             showEditOptionsDialog = true
@@ -107,10 +109,6 @@ fun TaskListsScreen(viewModel: MainViewModel, showTopBar: Boolean = true) {
                 showEditOptionsDialog = false
                 showRenameTaskListDialog = true
             },
-            onEdit = {
-                showEditOptionsDialog = false
-                showEditTaskListDialog = true
-            },
             onDelete = {
                 selectedTaskList?.let { viewModel.deleteTaskList(it.id) }
                 showEditOptionsDialog = false
@@ -126,19 +124,6 @@ fun TaskListsScreen(viewModel: MainViewModel, showTopBar: Boolean = true) {
                 onRename = { newName ->
                     viewModel.renameTaskList(taskList.id, newName)
                     showRenameTaskListDialog = false
-                }
-            )
-        }
-    }
-
-    if (showEditTaskListDialog) {
-        selectedTaskList?.let { taskList ->
-            EditTaskListDialog(
-                taskList = taskList,
-                onDismiss = { showEditTaskListDialog = false },
-                onSave = { newName ->
-                    viewModel.editTaskList(taskList.id, newName)
-                    showEditTaskListDialog = false
                 }
             )
         }
@@ -184,7 +169,6 @@ private fun AddTaskListDialog(onDismiss: () -> Unit, onAddTaskList: (String) -> 
 private fun EditOptionsDialog(
     onDismiss: () -> Unit,
     onRename: () -> Unit,
-    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     AlertDialog(
@@ -196,10 +180,7 @@ private fun EditOptionsDialog(
                 Button(onClick = onRename, modifier = Modifier.fillMaxWidth()) {
                     Text("Rename")
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
-                    Text("Edit")
-                }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
                     Text("Delete")
@@ -238,40 +219,6 @@ private fun RenameTaskListDialog(
                 }
             ) {
                 Text("Rename")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@Composable
-private fun EditTaskListDialog(
-    taskList: TaskList,
-    onDismiss: () -> Unit,
-    onSave: (String) -> Unit
-) {
-    var newName by remember { mutableStateOf(taskList.name) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit Task List") },
-        text = {
-            TextField(
-                value = newName,
-                onValueChange = { newName = it },
-                label = { Text("Name") }
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onSave(newName)
-                }
-            ) {
-                Text("Save")
             }
         },
         dismissButton = {
