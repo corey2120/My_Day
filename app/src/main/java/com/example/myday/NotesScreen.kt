@@ -34,15 +34,12 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun NotesScreen(
     viewModel: MainViewModel,
-    onNoteClicked: (String) -> Unit,
-    paddingValues: PaddingValues
+    onNoteClicked: (String) -> Unit
 ) {
     val notes by viewModel.notes.collectAsState()
 
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
-        modifier = Modifier.padding(top = 56.dp),
-        contentPadding = paddingValues,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalItemSpacing = 8.dp
     ) {

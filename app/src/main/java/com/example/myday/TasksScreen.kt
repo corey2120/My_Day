@@ -54,8 +54,7 @@ fun PriorityIndicator(priority: Priority, onClick: () -> Unit) {
 fun TasksScreen(
     viewModel: MainViewModel,
     listId: String,
-    onBack: () -> Unit,
-    paddingValues: PaddingValues
+    onBack: () -> Unit
 ) {
     val tasks: List<Task> by viewModel.tasks.collectAsState()
     val taskLists: List<TaskList> by viewModel.taskLists.collectAsState()

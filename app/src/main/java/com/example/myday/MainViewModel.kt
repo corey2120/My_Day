@@ -85,12 +85,10 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun addTaskList(name: String) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                taskDao.insertTaskList(TaskList(name = name))
-            }
-        }
+    suspend fun addTaskList(name: String): TaskList = withContext(Dispatchers.IO) {
+        val newTaskList = TaskList(name = name)
+        taskDao.insertTaskList(newTaskList)
+        newTaskList
     }
 
 

@@ -88,91 +88,9 @@ fun HomeScreen(viewModel: MainViewModel) {
     var showNotesBackButton by remember { mutableStateOf(false) }
     val onNotesBack: () -> Unit = { notesNavController.popBackStack() }
 
-    if (showThemeDialog) {
-        ThemeSwitcherDialog(viewModel = viewModel, onDismiss = { showThemeDialog = false })
-    }
+
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { 
-                    when (val screen = currentTasksScreen) {
-                        is TasksScreen.TaskLists -> Text("Task Lists")
-                        is TasksScreen.Tasks -> {
-                            val listName = viewModel.taskLists.collectAsState().value.find { it.id == screen.listId }?.name ?: "Tasks"
-                            Text(listName)
-                        }
-                    }
-                },
-                navigationIcon = {
-                    Log.d("HomeScreen", "navigationIcon recomposing: showTasksBackButton=$showTasksBackButton, showNotesBackButton=$showNotesBackButton")
-                    if (showTasksBackButton) {
-                        IconButton(onClick = onTasksBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    } else if (showNotesBackButton) {
-                        IconButton(onClick = onNotesBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    } else {
-                        // Placeholder for when no back button is needed
-                        Spacer(modifier = Modifier.width(48.dp)) // Occupy space to keep alignment
-                    }
-                },
-                windowInsets = WindowInsets(top = 0.dp),
-                actions = {
-                    var showMenu by remember { mutableStateOf(false) }
-
-                    IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More"
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Home") },
-                            onClick = {
-                                scope.launch { pagerState.animateScrollToPage(0) }
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Tasks") },
-                            onClick = {
-                                scope.launch { pagerState.animateScrollToPage(1) }
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Notes") },
-                            onClick = {
-                                scope.launch { pagerState.animateScrollToPage(2) }
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Google Login") },
-                            onClick = {
-                                Log.d("HomeScreen", "Google Login clicked - Implement actual login logic here")
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Settings") },
-                            onClick = {
-                                showThemeDialog = true
-                                showMenu = false
-                            }
-                        )
-                    }
-                }
-            )
-        },
         bottomBar = {
             NavigationBar {
                 val items = listOf("Calendar", "Tasks", "Notes")
@@ -192,25 +110,15 @@ fun HomeScreen(viewModel: MainViewModel) {
                     )
                 }
             }
-        },
-        floatingActionButton = {
-            if (pagerState.currentPage == 2) { // Notes screen
-                FloatingActionButton(
-                    onClick = { notesNavController.navigate("note_detail/new") },
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Note", tint = MaterialTheme.colorScheme.onPrimary)
-                }
-            }
         }
     ) { paddingValues ->
-        HorizontalPager(state = pagerState) { page ->
+        HorizontalPager(state = pagerState, modifier = Modifier.padding(paddingValues)) { page ->
             when (page) {
-                0 -> CalendarScreen(viewModel = viewModel, paddingValues = paddingValues)
+                0 -> CalendarScreen(viewModel = viewModel)
                 1 -> {
                     when (val screen = currentTasksScreen) {
-                        is TasksScreen.TaskLists -> TaskListsScreen(viewModel = viewModel, onTaskListClicked = { listId -> currentTasksScreen = TasksScreen.Tasks(listId) }, onBack = {}, paddingValues = paddingValues)
-                        is TasksScreen.Tasks -> TasksScreen(viewModel = viewModel, listId = screen.listId, onBack = { currentTasksScreen = TasksScreen.TaskLists }, paddingValues = paddingValues)
+                        is TasksScreen.TaskLists -> TaskListsScreen(viewModel = viewModel, onTaskListClicked = { listId -> currentTasksScreen = TasksScreen.Tasks(listId) })
+                        is TasksScreen.Tasks -> TasksScreen(viewModel = viewModel, listId = screen.listId, onBack = { currentTasksScreen = TasksScreen.TaskLists })
                     }
                 }
                 2 -> {
@@ -223,8 +131,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         composable("notes_list") {
                             NotesScreen(
                                 viewModel = viewModel,
-                                onNoteClicked = { noteId -> notesNavController.navigate("note_detail/$noteId") },
-                                paddingValues = paddingValues
+                                onNoteClicked = { noteId -> notesNavController.navigate("note_detail/$noteId") }
                             )
                         }
                         composable("note_detail/{noteId}") { backStackEntry ->
@@ -241,6 +148,7 @@ fun HomeScreen(viewModel: MainViewModel) {
         }
     }
 }
+
 
 
 
@@ -281,6 +189,7 @@ private fun ThemeSwitcherDialog(viewModel: MainViewModel, onDismiss: () -> Unit)
 private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Unit, selectedDate: Date?) {
     var taskDescription by remember { mutableStateOf("") }
     val taskLists by viewModel.taskLists.collectAsState()
+    val scope = rememberCoroutineScope()
 
     // Correctly find the list based on the current state
     val generalList = taskLists.find { it.name == "General" }
@@ -301,16 +210,19 @@ private fun AddTaskFromHomeDialog(viewModel: MainViewModel, onDismiss: () -> Uni
         confirmButton = {
             Button(
                 onClick = {
-                    generalList?.let {
-                        viewModel.addTask(
-                            description = taskDescription,
-                            listId = it.id,
-                            date = selectedDate
-                        )
+                    scope.launch {
+                        val list = generalList ?: viewModel.addTaskList("General")
+                        list?.let {
+                            viewModel.addTask(
+                                description = taskDescription,
+                                listId = it.id,
+                                date = selectedDate
+                            )
+                        }
                         onDismiss()
                     }
                 },
-                enabled = taskDescription.isNotBlank() && generalList != null
+                enabled = taskDescription.isNotBlank()
             ) {
                 Text("Add")
             }
@@ -588,7 +500,7 @@ fun EmptyState() {
 }
 
 @Composable
-fun CalendarScreen(viewModel: MainViewModel, paddingValues: PaddingValues) {
+fun CalendarScreen(viewModel: MainViewModel) {
     val tasks: List<Task> by viewModel.tasks.collectAsState()
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var currentMonth by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MONTH)) }
@@ -615,7 +527,7 @@ fun CalendarScreen(viewModel: MainViewModel, paddingValues: PaddingValues) {
         })
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = paddingValues) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             Column(
                 modifier = Modifier
