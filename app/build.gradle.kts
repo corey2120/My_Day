@@ -11,7 +11,7 @@ plugins {
 }
 
 android {
-    // **FIX 2: Use the imported 'Properties' class**
+
     val localProperties = Properties()
     val localPropertiesFile = rootProject.file("local.properties")
     if (localPropertiesFile.exists()) {
@@ -33,7 +33,7 @@ android {
             useSupportLibrary = true
         }
 
-        // **FIX 3: Read the API key and add it to BuildConfig**
+
         buildConfigField(
             "String",
             "GEMINI_API_KEY",
@@ -62,8 +62,7 @@ android {
         buildConfig = true
     }
     composeOptions {
-        // This version should be compatible with your Kotlin and Compose versions.
-        // For Kotlin 2.0.0 and recent Compose, this is a more appropriate version.
+
         kotlinCompilerExtensionVersion = "1.5.14"
     }
     packaging {
@@ -102,7 +101,7 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
-    // NOTE: Consider adding an entry for hilt-navigation-compose to your libs.versions.toml
+
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Kotlinx Serialization
