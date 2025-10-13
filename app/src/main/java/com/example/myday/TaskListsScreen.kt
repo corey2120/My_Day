@@ -1,42 +1,33 @@
 package com.example.myday
 
-
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-
+/**
+ * This screen displays a list of task lists. The user can add, rename, and delete task lists.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListsScreen(
@@ -44,14 +35,27 @@ fun TaskListsScreen(
     onTaskListClicked: (String) -> Unit
 ) {
     val taskLists: List<TaskList> by viewModel.taskLists.collectAsState()
-
-    var showDialog by remember { mutableStateOf(false) }
-
-    var selectedTaskList by remember { mutableStateOf<TaskList?>(null) }
-    var showEditOptionsDialog by remember { mutableStateOf(false) }
-    var showRenameTaskListDialog by remember { mutableStateOf(false) }
-
     val scope = rememberCoroutineScope()
+
+    val state = remember {
+        TaskListScreenState(
+            onAddTaskList = { name ->
+                scope.launch {
+                    viewModel.addTaskList(name)
+                }
+            },
+            onRenameTaskList = { id, newName ->
+                scope.launch {
+                    viewModel.renameTaskList(id, newName)
+                }
+            },
+            onDeleteTaskList = { id ->
+                scope.launch {
+                    viewModel.deleteTaskList(id)
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -60,168 +64,54 @@ fun TaskListsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }) {
+            FloatingActionButton(onClick = { state.onAddTaskListClicked() }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Task List")
             }
         }
     ) { innerPadding ->
-        LazyColumn(contentPadding = innerPadding) {
+        LazyColumn(modifier = Modifier.padding(innerPadding)) {
             items(taskLists) { taskList ->
-                Box(
-                    modifier = Modifier.combinedClickable(
-                        onClick = { onTaskListClicked(taskList.id) },
-                        onLongClick = {
-                            selectedTaskList = taskList
-                            showEditOptionsDialog = true
-                        }
-                    )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .combinedClickable(
+                            onClick = { onTaskListClicked(taskList.id) },
+                            onLongClick = { state.onTaskListLongClicked(taskList) }
+                        )
+                        .padding(16.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(text = taskList.name)
-                    }
+                    Text(text = taskList.name, style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
     }
 
-    if (showDialog) {
+    if (state.showAddTaskListDialog) {
         AddTaskListDialog(
-            onDismiss = { showDialog = false },
+            onDismiss = { state.onDismissDialog() },
             onAddTaskList = { name ->
-                scope.launch {
-                    viewModel.addTaskList(name)
-                }
-                showDialog = false
+                state.addTaskList(name)
             }
         )
     }
 
-    if (showEditOptionsDialog) {
-        EditOptionsDialog(
-            onDismiss = { showEditOptionsDialog = false },
-            onRename = {
-                showEditOptionsDialog = false
-                showRenameTaskListDialog = true
-            },
-            onDelete = {
-                selectedTaskList?.let { viewModel.deleteTaskList(it.id) }
-                showEditOptionsDialog = false
-            }
+    if (state.showEditOptionsDialog) {
+        EditOptionsBottomSheet(
+            onDismiss = { state.onDismissDialog() },
+            onRename = { state.onRenameClicked() },
+            onDelete = { state.onDeleteTaskList() }
         )
     }
 
-    if (showRenameTaskListDialog) {
-        selectedTaskList?.let { taskList ->
+    if (state.showRenameTaskListDialog) {
+        state.selectedTaskList?.let { taskList ->
             RenameTaskListDialog(
                 taskList = taskList,
-                onDismiss = { showRenameTaskListDialog = false },
+                onDismiss = { state.onDismissDialog() },
                 onRename = { newName ->
-                    viewModel.renameTaskList(taskList.id, newName)
-                    showRenameTaskListDialog = false
+                    state.onRenameTaskList(newName)
                 }
             )
         }
     }
-}
-
-@Composable
-private fun AddTaskListDialog(onDismiss: () -> Unit, onAddTaskList: (String) -> Unit) {
-    var newListName by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Create New Task List") },
-        text = {
-            Column {
-                TextField(
-                    value = newListName,
-                    onValueChange = { newListName = it },
-                    label = { Text("List Name") }
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (newListName.isNotBlank()) {
-                        onAddTaskList(newListName)
-                    }
-                }
-            ) {
-                Text("Create")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@Composable
-private fun EditOptionsDialog(
-    onDismiss: () -> Unit,
-    onRename: () -> Unit,
-    onDelete: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Task List Options") },
-        text = {
-            Column {
-                Text("What would you like to do?", modifier = Modifier.padding(bottom = 8.dp))
-                Button(onClick = onRename, modifier = Modifier.fillMaxWidth()) {
-                    Text("Rename")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
-                    Text("Delete")
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@Composable
-private fun RenameTaskListDialog(
-    taskList: TaskList,
-    onDismiss: () -> Unit,
-    onRename: (String) -> Unit
-) {
-    var newName by remember { mutableStateOf(taskList.name) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Rename Task List") },
-        text = {
-            TextField(
-                value = newName,
-                onValueChange = { newName = it },
-                label = { Text("New Name") }
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onRename(newName)
-                }
-            ) {
-                Text("Rename")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 }
