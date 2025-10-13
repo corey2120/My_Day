@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -38,23 +39,14 @@ fun NotesScreen(
 ) {
     val notes by viewModel.notes.collectAsState()
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { onNoteClicked("") }) {
-                Icon(Icons.Default.Add, contentDescription = "Add New Note")
-            }
-        }
-    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalItemSpacing = 8.dp,
-            contentPadding = paddingValues,
+            contentPadding = PaddingValues(8.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-            }
             items(notes) { note ->
                 NoteItem(note = note, onClick = { onNoteClicked(note.id) }, onDelete = { viewModel.deleteNote(note) })
             }

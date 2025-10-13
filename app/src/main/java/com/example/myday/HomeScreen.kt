@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Circle
@@ -108,6 +109,13 @@ fun HomeScreen(viewModel: MainViewModel) {
                             }
                         }
                     )
+                },
+                floatingActionButton = {
+                    if (pagerState.currentPage == 2) {
+                        FloatingActionButton(onClick = { notesNavController.navigate("note_detail_new") }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add New Note")
+                        }
+                    }
                 },
                 bottomBar = {
                     NavigationBar {
@@ -250,6 +258,9 @@ fun CalendarScreen(viewModel: MainViewModel) {
                     onAddTaskClicked = { showAddTaskDialog = true },
                     onToggleTask = { task ->
                         viewModel.toggleTaskCompleted(task.id)
+                    },
+                    onDeleteTask = { task ->
+                        viewModel.deleteTask(task)
                     }
                 )
             }
@@ -487,7 +498,8 @@ fun TaskViewer(
     selectedDate: LocalDate,
     tasks: List<Task>,
     onAddTaskClicked: () -> Unit,
-    onToggleTask: (Task) -> Unit
+    onToggleTask: (Task) -> Unit,
+    onDeleteTask: (Task) -> Unit
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("eeee, MMMM d")
 
@@ -531,7 +543,7 @@ fun TaskViewer(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(tasks, key = { it.id }) { task ->
-                        TaskItem(task = task, onToggle = { onToggleTask(task) })
+                        TaskItem(task = task, onToggle = { onToggleTask(task) }, onDelete = { onDeleteTask(task) })
                     }
                 }
             } else {
@@ -542,7 +554,7 @@ fun TaskViewer(
 }
 
 @Composable
-fun TaskItem(task: Task, onToggle: () -> Unit) {
+fun TaskItem(task: Task, onToggle: () -> Unit, onDelete: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -559,7 +571,7 @@ fun TaskItem(task: Task, onToggle: () -> Unit) {
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = task.description,
                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
@@ -571,6 +583,9 @@ fun TaskItem(task: Task, onToggle: () -> Unit) {
                 color = if (task.isCompleted) LocalContentColor.current.copy(alpha = 0.5f) else LocalContentColor.current.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.bodySmall
             )
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.Delete, contentDescription = "Delete Task")
         }
     }
 }

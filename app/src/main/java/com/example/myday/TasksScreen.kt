@@ -7,6 +7,7 @@ import android.content.Intent
 import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -97,58 +98,29 @@ fun TasksScreen(
     }
 
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(listName) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            Column {
-                FloatingActionButton(onClick = { showTaskDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Task")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                FloatingActionButton(
-                    onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-                ) {
-                    Icon(Icons.Default.Mic, contentDescription = "Speak Task")
-                }
-            }
-        }
-    ) { innerPadding ->
-
-        val topPadding = innerPadding.calculateTopPadding()
-        val newPadding = PaddingValues(
-            top = topPadding - 20.dp,
-            bottom = innerPadding.calculateBottomPadding(),
-            start = innerPadding.calculateStartPadding(LayoutDirection.Ltr),
-            end = innerPadding.calculateEndPadding(LayoutDirection.Ltr)
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
-            contentPadding = newPadding
+            modifier = Modifier.animateContentSize(),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
         ) {
             items(tasksForList) { task ->
-                Box(modifier = Modifier.combinedClickable(
-                    onClick = { viewModel.toggleTaskCompleted(task.id) },
-                    onLongClick = {
-                        selectedTask = task
-                        showEditOptionsDialog = true
-                    }
-                )
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .combinedClickable(
+                            onClick = { viewModel.toggleTaskCompleted(task.id) },
+                            onLongClick = {
+                                selectedTask = task
+                                showEditOptionsDialog = true
+                            }
+                        ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
@@ -181,6 +153,17 @@ fun TasksScreen(
                         }
                     }
                 }
+            }
+        }
+        Column(modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+            FloatingActionButton(onClick = { showTaskDialog = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Add Task")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            FloatingActionButton(
+                onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+            ) {
+                Icon(Icons.Default.Mic, contentDescription = "Speak Task")
             }
         }
     }

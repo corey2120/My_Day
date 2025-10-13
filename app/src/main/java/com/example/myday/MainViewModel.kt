@@ -148,6 +148,14 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun deleteTask(task: Task) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                taskDao.deleteTask(task)
+            }
+        }
+    }
+
     fun deleteTask(taskId: String) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {

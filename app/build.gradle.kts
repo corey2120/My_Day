@@ -1,4 +1,4 @@
-import java.util.Properties // <-- **FIX 1: Add this import statement at the top**
+import java.util.Properties
 
 plugins {
     // Use aliases from libs.versions.toml for consistency and to avoid conflicts
@@ -54,8 +54,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        jvmToolchain(17)
     }
     buildFeatures {
         compose = true
@@ -83,6 +83,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+
 
     // Test dependencies
     testImplementation(libs.junit)
