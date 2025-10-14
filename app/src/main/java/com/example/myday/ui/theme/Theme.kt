@@ -162,6 +162,196 @@ private val darkSchemePurple = darkColorScheme(
     onSurface = onSurfaceDarkPurple,
 )
 
+private val lightSchemeOcean = lightColorScheme(
+    primary = primaryLightOcean,
+    onPrimary = onPrimaryLightOcean,
+    primaryContainer = primaryContainerLightOcean,
+    onPrimaryContainer = onPrimaryContainerLightOcean,
+    secondary = secondaryLightOcean,
+    onSecondary = onSecondaryLightOcean,
+    secondaryContainer = secondaryContainerLightOcean,
+    onSecondaryContainer = onSecondaryContainerLightOcean,
+    tertiary = tertiaryLightOcean,
+    onTertiary = onTertiaryLightOcean,
+    tertiaryContainer = tertiaryContainerLightOcean,
+    onTertiaryContainer = onTertiaryContainerLightOcean,
+    background = backgroundLightOcean,
+    onBackground = onBackgroundLightOcean,
+    surface = surfaceLightOcean,
+    onSurface = onSurfaceLightOcean,
+)
+
+private val darkSchemeOcean = darkColorScheme(
+    primary = primaryDarkOcean,
+    onPrimary = onPrimaryDarkOcean,
+    primaryContainer = primaryContainerDarkOcean,
+    onPrimaryContainer = onPrimaryContainerDarkOcean,
+    secondary = secondaryDarkOcean,
+    onSecondary = onSecondaryDarkOcean,
+    secondaryContainer = secondaryContainerDarkOcean,
+    onSecondaryContainer = onSecondaryContainerDarkOcean,
+    tertiary = tertiaryDarkOcean,
+    onTertiary = onTertiaryDarkOcean,
+    tertiaryContainer = tertiaryContainerDarkOcean,
+    onTertiaryContainer = onTertiaryContainerDarkOcean,
+    background = backgroundDarkOcean,
+    onBackground = onBackgroundDarkOcean,
+    surface = surfaceDarkOcean,
+    onSurface = onSurfaceDarkOcean,
+)
+
+private val lightSchemeSunset = lightColorScheme(
+    primary = primaryLightSunset,
+    onPrimary = onPrimaryLightSunset,
+    primaryContainer = primaryContainerLightSunset,
+    onPrimaryContainer = onPrimaryContainerLightSunset,
+    secondary = secondaryLightSunset,
+    onSecondary = onSecondaryLightSunset,
+    secondaryContainer = secondaryContainerLightSunset,
+    onSecondaryContainer = onSecondaryContainerLightSunset,
+    tertiary = tertiaryLightSunset,
+    onTertiary = onTertiaryLightSunset,
+    tertiaryContainer = tertiaryContainerLightSunset,
+    onTertiaryContainer = onTertiaryContainerLightSunset,
+    background = backgroundLightSunset,
+    onBackground = onBackgroundLightSunset,
+    surface = surfaceLightSunset,
+    onSurface = onSurfaceLightSunset,
+)
+
+private val darkSchemeSunset = darkColorScheme(
+    primary = primaryDarkSunset,
+    onPrimary = onPrimaryDarkSunset,
+    primaryContainer = primaryContainerDarkSunset,
+    onPrimaryContainer = onPrimaryContainerDarkSunset,
+    secondary = secondaryDarkSunset,
+    onSecondary = onSecondaryDarkSunset,
+    secondaryContainer = secondaryContainerDarkSunset,
+    onSecondaryContainer = onSecondaryContainerDarkSunset,
+    tertiary = tertiaryDarkSunset,
+    onTertiary = onTertiaryDarkSunset,
+    tertiaryContainer = tertiaryContainerDarkSunset,
+    onTertiaryContainer = onTertiaryContainerDarkSunset,
+    background = backgroundDarkSunset,
+    onBackground = onBackgroundDarkSunset,
+    surface = surfaceDarkSunset,
+    onSurface = onSurfaceDarkSunset,
+)
+
+private val lightSchemeRose = lightColorScheme(
+    primary = primaryLightRose,
+    onPrimary = onPrimaryLightRose,
+    primaryContainer = primaryContainerLightRose,
+    onPrimaryContainer = onPrimaryContainerLightRose,
+    secondary = secondaryLightRose,
+    onSecondary = onSecondaryLightRose,
+    secondaryContainer = secondaryContainerLightRose,
+    onSecondaryContainer = onSecondaryContainerLightRose,
+    tertiary = tertiaryLightRose,
+    onTertiary = onTertiaryLightRose,
+    tertiaryContainer = tertiaryContainerLightRose,
+    onTertiaryContainer = onTertiaryContainerLightRose,
+    background = backgroundLightRose,
+    onBackground = onBackgroundLightRose,
+    surface = surfaceLightRose,
+    onSurface = onSurfaceLightRose,
+)
+
+private val darkSchemeRose = darkColorScheme(
+    primary = primaryDarkRose,
+    onPrimary = onPrimaryDarkRose,
+    primaryContainer = primaryContainerDarkRose,
+    onPrimaryContainer = onPrimaryContainerDarkRose,
+    secondary = secondaryDarkRose,
+    onSecondary = onSecondaryDarkRose,
+    secondaryContainer = secondaryContainerDarkRose,
+    onSecondaryContainer = onSecondaryContainerDarkRose,
+    tertiary = tertiaryDarkRose,
+    onTertiary = onTertiaryDarkRose,
+    tertiaryContainer = tertiaryContainerDarkRose,
+    onTertiaryContainer = onTertiaryContainerDarkRose,
+    background = backgroundDarkRose,
+    onBackground = onBackgroundDarkRose,
+    surface = surfaceDarkRose,
+    onSurface = onSurfaceDarkRose,
+)
+
+private val lightSchemeTeal = lightColorScheme(
+    primary = primaryLightTeal,
+    onPrimary = onPrimaryLightTeal,
+    primaryContainer = primaryContainerLightTeal,
+    onPrimaryContainer = onPrimaryContainerLightTeal,
+    secondary = secondaryLightTeal,
+    onSecondary = onSecondaryLightTeal,
+    secondaryContainer = secondaryContainerLightTeal,
+    onSecondaryContainer = onSecondaryContainerLightTeal,
+    tertiary = tertiaryLightTeal,
+    onTertiary = onTertiaryLightTeal,
+    tertiaryContainer = tertiaryContainerLightTeal,
+    onTertiaryContainer = onTertiaryContainerLightTeal,
+    background = backgroundLightTeal,
+    onBackground = onBackgroundLightTeal,
+    surface = surfaceLightTeal,
+    onSurface = onSurfaceLightTeal,
+)
+
+private val darkSchemeTeal = darkColorScheme(
+    primary = primaryDarkTeal,
+    onPrimary = onPrimaryDarkTeal,
+    primaryContainer = primaryContainerDarkTeal,
+    onPrimaryContainer = onPrimaryContainerDarkTeal,
+    secondary = secondaryDarkTeal,
+    onSecondary = onSecondaryDarkTeal,
+    secondaryContainer = secondaryContainerDarkTeal,
+    onSecondaryContainer = onSecondaryContainerDarkTeal,
+    tertiary = tertiaryDarkTeal,
+    onTertiary = onTertiaryDarkTeal,
+    tertiaryContainer = tertiaryContainerDarkTeal,
+    onTertiaryContainer = onTertiaryContainerDarkTeal,
+    background = backgroundDarkTeal,
+    onBackground = onBackgroundDarkTeal,
+    surface = surfaceDarkTeal,
+    onSurface = onSurfaceDarkTeal,
+)
+
+private val lightSchemeMidnight = lightColorScheme(
+    primary = primaryLightMidnight,
+    onPrimary = onPrimaryLightMidnight,
+    primaryContainer = primaryContainerLightMidnight,
+    onPrimaryContainer = onPrimaryContainerLightMidnight,
+    secondary = secondaryLightMidnight,
+    onSecondary = onSecondaryLightMidnight,
+    secondaryContainer = secondaryContainerLightMidnight,
+    onSecondaryContainer = onSecondaryContainerLightMidnight,
+    tertiary = tertiaryLightMidnight,
+    onTertiary = onTertiaryLightMidnight,
+    tertiaryContainer = tertiaryContainerLightMidnight,
+    onTertiaryContainer = onTertiaryContainerLightMidnight,
+    background = backgroundLightMidnight,
+    onBackground = onBackgroundLightMidnight,
+    surface = surfaceLightMidnight,
+    onSurface = onSurfaceLightMidnight,
+)
+
+private val darkSchemeMidnight = darkColorScheme(
+    primary = primaryDarkMidnight,
+    onPrimary = onPrimaryDarkMidnight,
+    primaryContainer = primaryContainerDarkMidnight,
+    onPrimaryContainer = onPrimaryContainerDarkMidnight,
+    secondary = secondaryDarkMidnight,
+    onSecondary = onSecondaryDarkMidnight,
+    secondaryContainer = secondaryContainerDarkMidnight,
+    onSecondaryContainer = onSecondaryContainerDarkMidnight,
+    tertiary = tertiaryDarkMidnight,
+    onTertiary = onTertiaryDarkMidnight,
+    tertiaryContainer = tertiaryContainerDarkMidnight,
+    onTertiaryContainer = onTertiaryContainerDarkMidnight,
+    background = backgroundDarkMidnight,
+    onBackground = onBackgroundDarkMidnight,
+    surface = surfaceDarkMidnight,
+    onSurface = onSurfaceDarkMidnight,
+)
+
 @Composable
 fun MyDayTheme(
     themeName: String = "Default Blue",
@@ -178,11 +368,21 @@ fun MyDayTheme(
         darkTheme -> when (themeName) {
             "Forest Green" -> darkSchemeGreen
             "Deep Purple" -> darkSchemePurple
+            "Ocean Blue" -> darkSchemeOcean
+            "Sunset Orange" -> darkSchemeSunset
+            "Rose Pink" -> darkSchemeRose
+            "Teal Mint" -> darkSchemeTeal
+            "Midnight Dark" -> darkSchemeMidnight
             else -> darkScheme
         }
         else -> when (themeName) {
             "Forest Green" -> lightSchemeGreen
             "Deep Purple" -> lightSchemePurple
+            "Ocean Blue" -> lightSchemeOcean
+            "Sunset Orange" -> lightSchemeSunset
+            "Rose Pink" -> lightSchemeRose
+            "Teal Mint" -> lightSchemeTeal
+            "Midnight Dark" -> lightSchemeMidnight
             else -> lightScheme
         }
     }

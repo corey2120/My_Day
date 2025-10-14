@@ -26,6 +26,9 @@ class SettingsManager(context: Context) {
         val SHOW_NEWS_KEY = booleanPreferencesKey("show_news")
         val SHOW_WEATHER_KEY = booleanPreferencesKey("show_weather")
         val NEWS_CATEGORY_KEY = stringPreferencesKey("news_category")
+        
+        // Security preferences
+        val SECURE_NOTES_PIN_KEY = stringPreferencesKey("secure_notes_pin")
     }
 
     val theme: Flow<String> = dataStore.data.map {
@@ -50,6 +53,10 @@ class SettingsManager(context: Context) {
     
     val newsCategory: Flow<String> = dataStore.data.map {
         it[NEWS_CATEGORY_KEY] ?: "general"
+    }
+    
+    val secureNotesPin: Flow<String?> = dataStore.data.map {
+        it[SECURE_NOTES_PIN_KEY]
     }
 
     suspend fun setTheme(themeName: String) {
@@ -85,6 +92,16 @@ class SettingsManager(context: Context) {
     suspend fun setNewsCategory(category: String) {
         dataStore.edit {
             it[NEWS_CATEGORY_KEY] = category
+        }
+    }
+    
+    suspend fun setSecureNotesPin(pin: String?) {
+        dataStore.edit {
+            if (pin.isNullOrBlank()) {
+                it.remove(SECURE_NOTES_PIN_KEY)
+            } else {
+                it[SECURE_NOTES_PIN_KEY] = pin
+            }
         }
     }
 }

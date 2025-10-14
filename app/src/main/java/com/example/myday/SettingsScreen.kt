@@ -331,7 +331,16 @@ private fun AppInfo() {
 
 @Composable
 private fun ThemeSwitcherDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
-    val themes = listOf("Default Blue", "Forest Green", "Deep Purple")
+    val themes = listOf(
+        "Default Blue", 
+        "Forest Green", 
+        "Deep Purple", 
+        "Ocean Blue",
+        "Sunset Orange",
+        "Rose Pink",
+        "Teal Mint",
+        "Midnight Dark"
+    )
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Choose a Theme") },

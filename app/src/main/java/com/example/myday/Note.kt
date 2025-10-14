@@ -11,5 +11,6 @@ data class Note(
     val title: String,
     val content: String,
     val lastModified: Date = Date(),
-    val color: Int = 0
+    val color: Int = 0,
+    val isSecured: Boolean = false
 )

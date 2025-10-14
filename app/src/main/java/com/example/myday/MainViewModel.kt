@@ -72,6 +72,8 @@ class MainViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = "general"
     )
+    
+    val secureNotesPin: Flow<String?> = settingsManager.secureNotesPin
 
     val taskLists: StateFlow<List<TaskList>> = taskDao.getTaskLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -143,6 +145,12 @@ class MainViewModel @Inject constructor(
     fun setNewsCategory(category: String) {
         viewModelScope.launch {
             settingsManager.setNewsCategory(category)
+        }
+    }
+    
+    fun setSecureNotesPin(pin: String?) {
+        viewModelScope.launch {
+            settingsManager.setSecureNotesPin(pin)
         }
     }
 
@@ -307,7 +315,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun addNote(title: String, content: String) {
+    fun addNote(title: String, content: String, isSecured: Boolean = false) {
         viewModelScope.launch {
             val colors = listOf(
                 0xFFFFFFFF,
@@ -324,7 +332,7 @@ class MainViewModel @Inject constructor(
                 0xFFE8EAED
             )
             val randomColor = colors.random()
-            NoteDao.insertNote(Note(title = title, content = content, color = randomColor.toInt()))
+            NoteDao.insertNote(Note(title = title, content = content, color = randomColor.toInt(), isSecured = isSecured))
         }
     }
 
