@@ -4,6 +4,7 @@ import android.R.attr.onClick
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,21 +61,72 @@ fun NotesScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             items(notes) { note ->
-                NoteItem(note = note, onClick = { onNoteClicked(note.id) })
+                NoteItem(
+                    note = note,
+                    onClick = { onNoteClicked(note.id) },
+                    onDelete = { viewModel.deleteNote(note) }
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun NoteItem(note: Note, onClick: () -> Unit) {
+fun NoteItem(note: Note, onClick: () -> Unit, onDelete: () -> Unit) {
     val backgroundColor = Color(note.color)
     val textColor = getTextColorForBackground(backgroundColor)
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Delete Note?") },
+            text = { 
+                Text(
+                    if (note.title.isNotBlank()) 
+                        "Are you sure you want to delete \"${note.title}\"?" 
+                    else 
+                        "Are you sure you want to delete this note?"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { 
+                    showDeleteDialog = true
+                }
+            ),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),

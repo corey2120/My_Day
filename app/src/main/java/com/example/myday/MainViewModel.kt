@@ -1,5 +1,6 @@
 package com.example.myday
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -249,6 +250,35 @@ class MainViewModel @Inject constructor(
                 val dateTime = date?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it) } ?: "Someday"
                 val newTask = Task(description = description, dateTime = dateTime, listId = listId)
                 taskDao.insertTask(newTask)
+            }
+        }
+    }
+    
+    fun importCalendarEvent(calendarTask: Task) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                // Ensure the "Calendar Events" task list exists
+                val calendarList = taskLists.value.find { it.id == "device_calendar" }
+                    ?: taskDao.insertTaskList(TaskList(id = "device_calendar", name = "Calendar Events")).let {
+                        TaskList(id = "device_calendar", name = "Calendar Events")
+                    }
+                
+                // Check if this event already exists (by description+date to avoid duplicates)
+                val existingTask = tasks.value.find { 
+                    it.description == calendarTask.description && 
+                    it.dateTime.startsWith(calendarTask.dateTime.take(10)) // Compare just the date part
+                }
+                
+                if (existingTask == null) {
+                    // Import as a new task
+                    taskDao.insertTask(calendarTask.copy(
+                        id = java.util.UUID.randomUUID().toString(),
+                        listId = "device_calendar"
+                    ))
+                    Log.d("MainViewModel", "Imported calendar event: ${calendarTask.description}")
+                } else {
+                    Log.d("MainViewModel", "Skipping duplicate event: ${calendarTask.description}")
+                }
             }
         }
     }
