@@ -3,6 +3,7 @@ package com.example.myday
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -25,6 +27,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -48,11 +52,15 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel) {
     var showThemeDialog by remember { mutableStateOf(false) }
     var showNewsCategoryDialog by remember { mutableStateOf(false) }
+    var showChangePinDialog by remember { mutableStateOf(false) }
+    var showSecurityQuestionDialog by remember { mutableStateOf(false) }
     
     val showGreeting by viewModel.showGreeting.collectAsState()
     val showQuote by viewModel.showQuote.collectAsState()
     val showNews by viewModel.showNews.collectAsState()
     val newsCategory by viewModel.newsCategory.collectAsState()
+    val secureNotesPin by viewModel.secureNotesPin.collectAsState(initial = null)
+    val securityQuestion by viewModel.securityQuestion.collectAsState(initial = null)
 
     Scaffold(
         topBar = {
@@ -138,6 +146,21 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel) {
             
             Spacer(modifier = Modifier.height(24.dp))
             
+            // Security Section
+            Text(
+                "Security",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            SecuritySection(
+                hasPin = !secureNotesPin.isNullOrBlank(),
+                hasSecurityQuestion = !securityQuestion.isNullOrBlank(),
+                onChangePinClick = { showChangePinDialog = true },
+                onSetupRecoveryClick = { showSecurityQuestionDialog = true }
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
             // Calendar Sync Section
             Text(
                 "Calendar Sync",
@@ -163,6 +186,29 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: MainViewModel) {
                 showNewsCategoryDialog = false
             },
             onDismiss = { showNewsCategoryDialog = false }
+        )
+    }
+    
+    if (showChangePinDialog) {
+        ChangePinDialog(
+            currentPin = secureNotesPin,
+            onPinChanged = { newPin ->
+                viewModel.setSecureNotesPin(newPin)
+                showChangePinDialog = false
+            },
+            onDismiss = { showChangePinDialog = false }
+        )
+    }
+    
+    if (showSecurityQuestionDialog) {
+        SecurityQuestionDialog(
+            currentQuestion = securityQuestion,
+            onSave = { question, answer ->
+                viewModel.setSecurityQuestion(question)
+                viewModel.setSecurityAnswer(answer)
+                showSecurityQuestionDialog = false
+            },
+            onDismiss = { showSecurityQuestionDialog = false }
         )
     }
 }
@@ -411,6 +457,362 @@ private fun NewsCategoryDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Close")
+            }
+        }
+    )
+}
+
+@Composable
+private fun SecuritySection(
+    hasPin: Boolean,
+    hasSecurityQuestion: Boolean,
+    onChangePinClick: () -> Unit,
+    onSetupRecoveryClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "Secure Notes Protection",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            
+            if (hasPin) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Change PIN", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Update your secure notes PIN",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(onClick = onChangePinClick) {
+                        Text("Change")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (hasSecurityQuestion) "Update Recovery" else "Setup Recovery",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            if (hasSecurityQuestion) "Change security question" else "Add security question for PIN recovery",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(onClick = onSetupRecoveryClick) {
+                        Text(if (hasSecurityQuestion) "Update" else "Setup")
+                    }
+                }
+            } else {
+                Text(
+                    "No PIN set yet. Create your first secure note to set up a PIN.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChangePinDialog(
+    currentPin: String?,
+    onPinChanged: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var oldPinInput by remember { mutableStateOf("") }
+    var newPinInput by remember { mutableStateOf("") }
+    var confirmPinInput by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                androidx.compose.material.icons.Icons.Default.Lock,
+                contentDescription = "Change PIN",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = { Text("Change PIN") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Enter your current PIN and choose a new one",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                OutlinedTextField(
+                    value = oldPinInput,
+                    onValueChange = { 
+                        if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                            oldPinInput = it
+                            error = null
+                        }
+                    },
+                    label = { Text("Current PIN") },
+                    placeholder = { Text("Enter current PIN") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = error != null,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                    ),
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+                
+                OutlinedTextField(
+                    value = newPinInput,
+                    onValueChange = { 
+                        if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                            newPinInput = it
+                            error = null
+                        }
+                    },
+                    label = { Text("New PIN") },
+                    placeholder = { Text("Enter new PIN (4-6 digits)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = error != null,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                    ),
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+                
+                OutlinedTextField(
+                    value = confirmPinInput,
+                    onValueChange = { 
+                        if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                            confirmPinInput = it
+                            error = null
+                        }
+                    },
+                    label = { Text("Confirm New PIN") },
+                    placeholder = { Text("Re-enter new PIN") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = error != null,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                    ),
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+                
+                error?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    when {
+                        oldPinInput != currentPin -> {
+                            error = "Current PIN is incorrect"
+                        }
+                        newPinInput.length !in 4..6 -> {
+                            error = "New PIN must be 4-6 digits"
+                        }
+                        newPinInput != confirmPinInput -> {
+                            error = "New PINs don't match"
+                        }
+                        newPinInput == oldPinInput -> {
+                            error = "New PIN must be different from current PIN"
+                        }
+                        else -> {
+                            onPinChanged(newPinInput)
+                        }
+                    }
+                },
+                enabled = oldPinInput.length >= 4 && newPinInput.length >= 4 && confirmPinInput.length >= 4
+            ) {
+                Text("Change PIN")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun SecurityQuestionDialog(
+    currentQuestion: String?,
+    onSave: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val securityQuestions = listOf(
+        "What was the name of your first pet?",
+        "What city were you born in?",
+        "What is your mother's maiden name?",
+        "What was the name of your elementary school?",
+        "What is your favorite book?",
+        "What was your childhood nickname?",
+        "In what city did you meet your spouse/partner?",
+        "What is the name of your favorite childhood friend?",
+        "Custom question..."
+    )
+    
+    var selectedQuestion by remember { mutableStateOf(currentQuestion ?: securityQuestions[0]) }
+    var customQuestion by remember { mutableStateOf("") }
+    var answer by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var showCustomInput by remember { mutableStateOf(false) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                androidx.compose.material.icons.Icons.Default.Lock,
+                contentDescription = "Security Question",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = { Text("Setup PIN Recovery") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Choose a security question to recover your PIN if forgotten",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Text(
+                    "Security Question",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                
+                securityQuestions.forEach { question ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (question == "Custom question...") {
+                                    showCustomInput = true
+                                    selectedQuestion = ""
+                                } else {
+                                    showCustomInput = false
+                                    selectedQuestion = question
+                                }
+                                error = null
+                            }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.RadioButton(
+                            selected = selectedQuestion == question || (showCustomInput && question == "Custom question..."),
+                            onClick = {
+                                if (question == "Custom question...") {
+                                    showCustomInput = true
+                                    selectedQuestion = ""
+                                } else {
+                                    showCustomInput = false
+                                    selectedQuestion = question
+                                }
+                                error = null
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            question,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                
+                if (showCustomInput) {
+                    OutlinedTextField(
+                        value = customQuestion,
+                        onValueChange = { 
+                            customQuestion = it
+                            error = null
+                        },
+                        label = { Text("Your Custom Question") },
+                        placeholder = { Text("Enter your security question") },
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = error != null,
+                        singleLine = false,
+                        maxLines = 3
+                    )
+                }
+                
+                OutlinedTextField(
+                    value = answer,
+                    onValueChange = { 
+                        answer = it
+                        error = null
+                    },
+                    label = { Text("Answer") },
+                    placeholder = { Text("Enter your answer") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = error != null,
+                    singleLine = false
+                )
+                
+                error?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val finalQuestion = if (showCustomInput) customQuestion else selectedQuestion
+                    when {
+                        finalQuestion.isBlank() -> {
+                            error = "Please select or enter a security question"
+                        }
+                        answer.isBlank() -> {
+                            error = "Please enter an answer"
+                        }
+                        answer.length < 3 -> {
+                            error = "Answer must be at least 3 characters"
+                        }
+                        else -> {
+                            onSave(finalQuestion, answer.lowercase().trim())
+                        }
+                    }
+                },
+                enabled = answer.isNotBlank()
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
     )

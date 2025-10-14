@@ -74,6 +74,8 @@ class MainViewModel @Inject constructor(
     )
     
     val secureNotesPin: Flow<String?> = settingsManager.secureNotesPin
+    val securityQuestion: Flow<String?> = settingsManager.securityQuestion
+    val securityAnswer: Flow<String?> = settingsManager.securityAnswer
 
     val taskLists: StateFlow<List<TaskList>> = taskDao.getTaskLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -151,6 +153,18 @@ class MainViewModel @Inject constructor(
     fun setSecureNotesPin(pin: String?) {
         viewModelScope.launch {
             settingsManager.setSecureNotesPin(pin)
+        }
+    }
+    
+    fun setSecurityQuestion(question: String?) {
+        viewModelScope.launch {
+            settingsManager.setSecurityQuestion(question)
+        }
+    }
+    
+    fun setSecurityAnswer(answer: String?) {
+        viewModelScope.launch {
+            settingsManager.setSecurityAnswer(answer)
         }
     }
 

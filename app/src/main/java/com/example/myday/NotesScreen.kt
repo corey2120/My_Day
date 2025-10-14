@@ -46,6 +46,8 @@ fun NotesScreen(
 ) {
     val notes by viewModel.notes.collectAsState()
     val secureNotesPin by viewModel.secureNotesPin.collectAsState(initial = null)
+    val securityQuestion by viewModel.securityQuestion.collectAsState(initial = null)
+    val securityAnswer by viewModel.securityAnswer.collectAsState(initial = null)
     var showQuickAddDialog by remember { mutableStateOf(false) }
     var noteToUnlock by remember { mutableStateOf<Note?>(null) }
 
@@ -63,12 +65,19 @@ fun NotesScreen(
     noteToUnlock?.let { note ->
         PinAuthDialog(
             expectedPin = secureNotesPin,
+            securityQuestion = securityQuestion,
+            securityAnswer = securityAnswer,
             onSuccess = {
                 noteToUnlock = null
                 onNoteClicked(note.id)
             },
             onDismiss = { noteToUnlock = null },
             onSetupPin = { newPin ->
+                viewModel.setSecureNotesPin(newPin)
+                noteToUnlock = null
+                onNoteClicked(note.id)
+            },
+            onPinRecovered = { newPin ->
                 viewModel.setSecureNotesPin(newPin)
                 noteToUnlock = null
                 onNoteClicked(note.id)
@@ -301,14 +310,22 @@ fun QuickAddNoteDialog(
 @Composable
 fun PinAuthDialog(
     expectedPin: String?,
+    securityQuestion: String?,
+    securityAnswer: String?,
     onSuccess: () -> Unit,
     onDismiss: () -> Unit,
-    onSetupPin: (String) -> Unit
+    onSetupPin: (String) -> Unit,
+    onPinRecovered: (String) -> Unit
 ) {
     var pinInput by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var showRecoveryMode by remember { mutableStateOf(false) }
+    var recoveryAnswer by remember { mutableStateOf("") }
+    var newPin by remember { mutableStateOf("") }
+    var confirmNewPin by remember { mutableStateOf("") }
     val isSetupMode = expectedPin.isNullOrBlank()
+    val hasRecoveryOption = !securityQuestion.isNullOrBlank() && !securityAnswer.isNullOrBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -320,48 +337,56 @@ fun PinAuthDialog(
             )
         },
         title = { 
-            Text(if (isSetupMode) "Setup Security PIN" else "Enter PIN") 
+            Text(
+                when {
+                    showRecoveryMode -> "Recover PIN"
+                    isSetupMode -> "Setup Security PIN"
+                    else -> "Enter PIN"
+                }
+            ) 
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (isSetupMode) {
+                if (showRecoveryMode) {
+                    // Recovery mode
                     Text(
-                        "Create a 4-6 digit PIN to secure your notes",
+                        "Answer your security question to reset your PIN",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-                
-                OutlinedTextField(
-                    value = pinInput,
-                    onValueChange = { 
-                        if (it.length <= 6 && it.all { char -> char.isDigit() }) {
-                            pinInput = it
-                            error = null
-                        }
-                    },
-                    label = { Text(if (isSetupMode) "Enter PIN" else "PIN") },
-                    placeholder = { Text("Enter 4-6 digits") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = error != null,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
-                    ),
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
-                )
-                
-                if (isSetupMode) {
+                    
+                    Text(
+                        securityQuestion ?: "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                    
                     OutlinedTextField(
-                        value = confirmPin,
+                        value = recoveryAnswer,
+                        onValueChange = { 
+                            recoveryAnswer = it
+                            error = null
+                        },
+                        label = { Text("Your Answer") },
+                        placeholder = { Text("Enter your answer") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = error != null
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    OutlinedTextField(
+                        value = newPin,
                         onValueChange = { 
                             if (it.length <= 6 && it.all { char -> char.isDigit() }) {
-                                confirmPin = it
+                                newPin = it
                                 error = null
                             }
                         },
-                        label = { Text("Confirm PIN") },
-                        placeholder = { Text("Re-enter PIN") },
+                        label = { Text("New PIN") },
+                        placeholder = { Text("Enter new PIN (4-6 digits)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         isError = error != null,
@@ -370,6 +395,87 @@ fun PinAuthDialog(
                         ),
                         visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
                     )
+                    
+                    OutlinedTextField(
+                        value = confirmNewPin,
+                        onValueChange = { 
+                            if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                                confirmNewPin = it
+                                error = null
+                            }
+                        },
+                        label = { Text("Confirm New PIN") },
+                        placeholder = { Text("Re-enter new PIN") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = error != null,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                        ),
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    )
+                } else {
+                    // Normal PIN entry or setup mode
+                    if (isSetupMode) {
+                        Text(
+                            "Create a 4-6 digit PIN to secure your notes",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    OutlinedTextField(
+                        value = pinInput,
+                        onValueChange = { 
+                            if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                                pinInput = it
+                                error = null
+                            }
+                        },
+                        label = { Text(if (isSetupMode) "Enter PIN" else "PIN") },
+                        placeholder = { Text("Enter 4-6 digits") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = error != null,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                        ),
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    )
+                    
+                    if (isSetupMode) {
+                        OutlinedTextField(
+                            value = confirmPin,
+                            onValueChange = { 
+                                if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                                    confirmPin = it
+                                    error = null
+                                }
+                            },
+                            label = { Text("Confirm PIN") },
+                            placeholder = { Text("Re-enter PIN") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = error != null,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                            ),
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                        )
+                    }
+                    
+                    // Forgot PIN link
+                    if (!isSetupMode && hasRecoveryOption) {
+                        TextButton(
+                            onClick = { 
+                                showRecoveryMode = true
+                                error = null
+                            },
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Text("Forgot PIN?", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                 }
                 
                 error?.let {
@@ -384,7 +490,26 @@ fun PinAuthDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (isSetupMode) {
+                    if (showRecoveryMode) {
+                        // Validate recovery
+                        when {
+                            recoveryAnswer.isBlank() -> {
+                                error = "Please enter your answer"
+                            }
+                            recoveryAnswer.lowercase().trim() != securityAnswer -> {
+                                error = "Incorrect answer"
+                            }
+                            newPin.length !in 4..6 -> {
+                                error = "New PIN must be 4-6 digits"
+                            }
+                            newPin != confirmNewPin -> {
+                                error = "PINs don't match"
+                            }
+                            else -> {
+                                onPinRecovered(newPin)
+                            }
+                        }
+                    } else if (isSetupMode) {
                         when {
                             pinInput.length !in 4..6 -> {
                                 error = "PIN must be 4-6 digits"
@@ -405,14 +530,36 @@ fun PinAuthDialog(
                         }
                     }
                 },
-                enabled = pinInput.length >= 4 && (isSetupMode.not() || confirmPin.length >= 4)
+                enabled = if (showRecoveryMode) {
+                    recoveryAnswer.isNotBlank() && newPin.length >= 4 && confirmNewPin.length >= 4
+                } else {
+                    pinInput.length >= 4 && (isSetupMode.not() || confirmPin.length >= 4)
+                }
             ) {
-                Text(if (isSetupMode) "Create PIN" else "Unlock")
+                Text(
+                    when {
+                        showRecoveryMode -> "Reset PIN"
+                        isSetupMode -> "Create PIN"
+                        else -> "Unlock"
+                    }
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            if (showRecoveryMode) {
+                TextButton(onClick = { 
+                    showRecoveryMode = false
+                    error = null
+                    recoveryAnswer = ""
+                    newPin = ""
+                    confirmNewPin = ""
+                }) {
+                    Text("Back")
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
             }
         }
     )

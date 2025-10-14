@@ -29,6 +29,8 @@ class SettingsManager(context: Context) {
         
         // Security preferences
         val SECURE_NOTES_PIN_KEY = stringPreferencesKey("secure_notes_pin")
+        val SECURITY_QUESTION_KEY = stringPreferencesKey("security_question")
+        val SECURITY_ANSWER_KEY = stringPreferencesKey("security_answer")
     }
 
     val theme: Flow<String> = dataStore.data.map {
@@ -57,6 +59,14 @@ class SettingsManager(context: Context) {
     
     val secureNotesPin: Flow<String?> = dataStore.data.map {
         it[SECURE_NOTES_PIN_KEY]
+    }
+    
+    val securityQuestion: Flow<String?> = dataStore.data.map {
+        it[SECURITY_QUESTION_KEY]
+    }
+    
+    val securityAnswer: Flow<String?> = dataStore.data.map {
+        it[SECURITY_ANSWER_KEY]
     }
 
     suspend fun setTheme(themeName: String) {
@@ -101,6 +111,26 @@ class SettingsManager(context: Context) {
                 it.remove(SECURE_NOTES_PIN_KEY)
             } else {
                 it[SECURE_NOTES_PIN_KEY] = pin
+            }
+        }
+    }
+    
+    suspend fun setSecurityQuestion(question: String?) {
+        dataStore.edit {
+            if (question.isNullOrBlank()) {
+                it.remove(SECURITY_QUESTION_KEY)
+            } else {
+                it[SECURITY_QUESTION_KEY] = question
+            }
+        }
+    }
+    
+    suspend fun setSecurityAnswer(answer: String?) {
+        dataStore.edit {
+            if (answer.isNullOrBlank()) {
+                it.remove(SECURITY_ANSWER_KEY)
+            } else {
+                it[SECURITY_ANSWER_KEY] = answer
             }
         }
     }
