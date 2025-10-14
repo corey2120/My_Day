@@ -3,7 +3,65 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    
+    <!-- Calendar/Planner Base -->
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M32,26 L76,26 C78.21,26 80,27.79 80,30 L80,78 C80,80.21 78.21,82 76,82 L32,82 C29.79,82 28,80.21 28,78 L28,30 C28,27.79 29.79,26 32,26 Z" />
+    
+    <!-- Header Bar -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M32,26 L76,26 C78.21,26 80,27.79 80,30 L80,38 L28,38 L28,30 C28,27.79 29.79,26 32,26 Z" />
+    
+    <!-- Binding Rings/Holes -->
+    <path
+        android:fillColor="#E3F2FD"
+        android:pathData="M36,30 C36,31.66 37.34,33 39,33 C40.66,33 42,31.66 42,30 C42,28.34 40.66,27 39,27 C37.34,27 36,28.34 36,30 Z" />
+    <path
+        android:fillColor="#E3F2FD"
+        android:pathData="M66,30 C66,31.66 67.34,33 69,33 C70.66,33 72,31.66 72,30 C72,28.34 70.66,27 69,27 C67.34,27 66,28.34 66,30 Z" />
+    
+    <!-- Task Checkboxes with checkmarks -->
+    <!-- First task - checked -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M34,44 L42,44 L42,52 L34,52 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M36,48 L38,50 L41,46" />
+    
+    <!-- Second task - checked -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M34,56 L42,56 L42,64 L34,64 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M36,60 L38,62 L41,58" />
+    
+    <!-- Third task - unchecked -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M30,30h48v48h-48z" />
+        android:pathData="M34,68 L42,68 L42,76 L34,76 Z" />
+    <path
+        android:strokeColor="#90CAF9"
+        android:strokeWidth="1.5"
+        android:pathData="M34,68 L42,68 L42,76 L34,76 Z" />
+    
+    <!-- Task lines (text representation) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,46 L74,46 C74.55,46 75,46.45 75,47 L75,49 C75,49.55 74.55,50 74,50 L46,50 C45.45,50 45,49.55 45,49 L45,47 C45,46.45 45.45,46 46,46 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,58 L74,58 C74.55,58 75,58.45 75,59 L75,61 C75,61.55 74.55,62 74,62 L46,62 C45.45,62 45,61.55 45,61 L45,59 C45,58.45 45.45,58 46,58 Z" />
+    <path
+        android:fillColor="#E3F2FD"
+        android:pathData="M46,70 L70,70 C70.55,70 71,70.45 71,71 L71,73 C71,73.55 70.55,74 70,74 L46,74 C45.45,74 45,73.55 45,73 L45,71 C45,70.45 45.45,70 46,70 Z" />
 </vector>
