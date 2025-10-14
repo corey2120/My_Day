@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -36,26 +37,23 @@ fun NoteDetailScreen(viewModel: MainViewModel, noteId: String?, onBack: () -> Un
 
     Log.d("NoteDetailScreen", "backgroundColor: $backgroundColor, textColor: $textColor")
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (noteId.isNullOrBlank()) "New Note" else "Edit Note",
-                        color = textColor
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { onBack() }) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = textColor
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = backgroundColor
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Minimal top bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = {
+                    if (title.isNotBlank() || content.isNotBlank()) {
                         if (noteId.isNullOrBlank()) {
                             viewModel.addNote(title, content)
                         } else {
@@ -68,70 +66,66 @@ fun NoteDetailScreen(viewModel: MainViewModel, noteId: String?, onBack: () -> Un
                                 )
                             }
                         }
-                        onBack()
-                    }) {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = "Save Note",
-                            tint = getTextColorForBackground(backgroundColor)
-                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor)
-            )
-        },
-        containerColor = backgroundColor
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-                            TextField(
-                                value = title,
-                                onValueChange = { title = it },
-                                placeholder = { Text("Title", color = textColor.copy(alpha = 0.7f)) },
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.headlineMedium,
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    disabledContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    focusedTextColor = textColor,
-                                    unfocusedTextColor = textColor,
-                                    disabledTextColor = textColor,
-                                    errorTextColor = textColor,
-                                    cursorColor = textColor,
-                                    selectionColors = TextSelectionColors(
-                                        handleColor = textColor,
-                                        backgroundColor = textColor.copy(alpha = 0.4f)
-                                    )
-                                )
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            TextField(
-                                value = content,
-                                onValueChange = { content = it },
-                                placeholder = { Text("Content", color = textColor.copy(alpha = 0.5f)) },
-                                modifier = Modifier.fillMaxWidth().weight(1f),
-                                textStyle = MaterialTheme.typography.bodyLarge,
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    disabledContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    focusedTextColor = textColor,
-                                    unfocusedTextColor = textColor,
-                                    disabledTextColor = textColor,
-                                    errorTextColor = textColor,
-                                    cursorColor = textColor,
-                                    selectionColors = TextSelectionColors(handleColor = textColor, backgroundColor = textColor.copy(alpha = 0.4f))
-                                )
-                            )            }
+                    onBack()
+                }) {
+                    Icon(
+                        Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = textColor
+                    )
+                }
+            }
+
+            // Content area - seamless
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                TextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    placeholder = { Text("Title", color = textColor.copy(alpha = 0.6f)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.headlineMedium.copy(color = textColor),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = textColor,
+                        unfocusedTextColor = textColor,
+                        cursorColor = textColor,
+                        selectionColors = TextSelectionColors(
+                            handleColor = textColor,
+                            backgroundColor = textColor.copy(alpha = 0.4f)
+                        )
+                    )
+                )
+                TextField(
+                    value = content,
+                    onValueChange = { content = it },
+                    placeholder = { Text("Note", color = textColor.copy(alpha = 0.6f)) },
+                    modifier = Modifier.fillMaxSize(),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = textColor,
+                        unfocusedTextColor = textColor,
+                        cursorColor = textColor,
+                        selectionColors = TextSelectionColors(
+                            handleColor = textColor,
+                            backgroundColor = textColor.copy(alpha = 0.4f)
+                        )
+                    )
+                )
+            }
         }
     }
-
-
+}

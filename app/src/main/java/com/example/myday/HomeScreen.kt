@@ -94,15 +94,10 @@ fun HomeScreen(viewModel: MainViewModel) {
                 derivedStateOf { currentTasksScreen is TasksScreen.Tasks }
             }
 
-            val onTasksBack: () -> Unit = { currentTasksScreen = TasksScreen.TaskLists }
-
-            var showNotesBackButton by remember { mutableStateOf(false) }
-            val onNotesBack: () -> Unit = { notesNavController.popBackStack() }
-
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text("MyDay") },
+                        title = { },
                         actions = {
                             IconButton(onClick = { currentScreen = Screen.Settings }) {
                                 Icon(Icons.Default.Settings, contentDescription = "Settings")
@@ -150,7 +145,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         2 -> {
                             val navBackStackEntry by notesNavController.currentBackStackEntryAsState()
                             LaunchedEffect(navBackStackEntry) {
-                                showNotesBackButton = notesNavController.previousBackStackEntry != null
+                                var showNotesBackButton = notesNavController.previousBackStackEntry != null
                                 Log.d("HomeScreen", "Notes LaunchedEffect: navBackStackEntry=$navBackStackEntry, showNotesBackButton=$showNotesBackButton")
                             }
                             NavHost(notesNavController, startDestination = "notes_list") {
@@ -228,7 +223,7 @@ fun CalendarScreen(viewModel: MainViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .padding(top = 8.dp, bottom = 16.dp)
+                    .padding(top = 8.dp, bottom = 8.dp)
             ) {
                 Text(
                     text = "My Calendar",
@@ -251,7 +246,7 @@ fun CalendarScreen(viewModel: MainViewModel) {
             }
         }
         item {
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp)) {
                 TaskViewer(
                     selectedDate = selectedDate,
                     tasks = tasksForSelectedDate,

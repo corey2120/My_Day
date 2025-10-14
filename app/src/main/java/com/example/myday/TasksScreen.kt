@@ -100,8 +100,10 @@ fun TasksScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier.animateContentSize(),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .animateContentSize(),
+            contentPadding = PaddingValues(top = 56.dp, bottom = 8.dp)
         ) {
             items(tasksForList) { task ->
                 Card(
@@ -155,6 +157,20 @@ fun TasksScreen(
                 }
             }
         }
+
+        // Back button overlay
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back"
+            )
+        }
+
         Column(modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
             FloatingActionButton(onClick = { showTaskDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Task")

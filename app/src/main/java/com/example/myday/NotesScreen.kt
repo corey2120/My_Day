@@ -44,18 +44,18 @@ fun NotesScreen(
             columns = StaggeredGridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalItemSpacing = 8.dp,
-            contentPadding = PaddingValues(8.dp),
+            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 80.dp),
             modifier = Modifier.fillMaxSize()
         ) {
             items(notes) { note ->
-                NoteItem(note = note, onClick = { onNoteClicked(note.id) }, onDelete = { viewModel.deleteNote(note) })
+                NoteItem(note = note, onClick = { onNoteClicked(note.id) })
             }
         }
     }
 }
 
 @Composable
-fun NoteItem(note: Note, onClick: () -> Unit, onDelete: () -> Unit) {
+fun NoteItem(note: Note, onClick: () -> Unit) {
     val backgroundColor = Color(note.color)
     val textColor = getTextColorForBackground(backgroundColor)
 
@@ -63,25 +63,30 @@ fun NoteItem(note: Note, onClick: () -> Unit, onDelete: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.padding(12.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = note.title, style = MaterialTheme.typography.titleMedium, color = textColor)
-                Spacer(modifier = Modifier.height(4.dp))
+            if (note.title.isNotBlank()) {
+                Text(
+                    text = note.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = textColor,
+                    maxLines = 3
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            if (note.content.isNotBlank()) {
                 Text(
                     text = note.content,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = textColor
+                    color = textColor.copy(alpha = 0.87f),
+                    maxLines = 10
                 )
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete Note", tint = textColor)
             }
         }
     }
