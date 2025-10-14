@@ -89,9 +89,21 @@ fun HomeScreen(viewModel: MainViewModel) {
             var currentTasksScreen by remember { mutableStateOf<TasksScreen>(TasksScreen.TaskLists) }
             var showThemeDialog by remember { mutableStateOf(false) }
             val notesNavController = rememberNavController()
+            var showQuickAddNote by remember { mutableStateOf(false) }
 
             val showTasksBackButton by remember {
                 derivedStateOf { currentTasksScreen is TasksScreen.Tasks }
+            }
+
+            if (showQuickAddNote) {
+                QuickAddNoteDialog(
+                    viewModel = viewModel,
+                    onDismiss = { showQuickAddNote = false },
+                    onViewFullEditor = {
+                        showQuickAddNote = false
+                        notesNavController.navigate("note_detail_new")
+                    }
+                )
             }
 
             Scaffold(
@@ -107,7 +119,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                 },
                 floatingActionButton = {
                     if (pagerState.currentPage == 2) {
-                        FloatingActionButton(onClick = { notesNavController.navigate("note_detail_new") }) {
+                        FloatingActionButton(onClick = { showQuickAddNote = true }) {
                             Icon(Icons.Default.Add, contentDescription = "Add New Note")
                         }
                     }
@@ -196,6 +208,12 @@ fun CalendarScreen(viewModel: MainViewModel) {
     var currentMonth by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MONTH)) }
     var currentYear by remember { mutableStateOf(Calendar.getInstance().get(Calendar.YEAR)) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
+    
+    // Widget preferences
+    val showGreeting by viewModel.showGreeting.collectAsState()
+    val showQuote by viewModel.showQuote.collectAsState()
+    val showNews by viewModel.showNews.collectAsState()
+    val newsCategory by viewModel.newsCategory.collectAsState()
 
     if (showAddTaskDialog) {
         AddTaskFromHomeDialog(
@@ -218,6 +236,26 @@ fun CalendarScreen(viewModel: MainViewModel) {
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        // Home Widgets Section
+        if (showGreeting) {
+            item {
+                GreetingWidget()
+            }
+        }
+        
+        if (showQuote) {
+            item {
+                QuoteWidget()
+            }
+        }
+        
+        if (showNews) {
+            item {
+                NewsWidget(category = newsCategory)
+            }
+        }
+        
+        // Calendar Section
         item {
             Column(
                 modifier = Modifier
@@ -529,7 +567,7 @@ fun TaskViewer(
                 }
             }
 
-            Divider()
+            HorizontalDivider()
 
             if (tasks.isNotEmpty()) {
                 LazyColumn(

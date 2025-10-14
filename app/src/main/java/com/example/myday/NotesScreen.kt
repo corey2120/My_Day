@@ -38,6 +38,18 @@ fun NotesScreen(
     onNoteClicked: (String) -> Unit
 ) {
     val notes by viewModel.notes.collectAsState()
+    var showQuickAddDialog by remember { mutableStateOf(false) }
+
+    if (showQuickAddDialog) {
+        QuickAddNoteDialog(
+            viewModel = viewModel,
+            onDismiss = { showQuickAddDialog = false },
+            onViewFullEditor = { 
+                showQuickAddDialog = false
+                onNoteClicked("")
+            }
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalStaggeredGrid(
@@ -90,4 +102,53 @@ fun NoteItem(note: Note, onClick: () -> Unit) {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun QuickAddNoteDialog(
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit,
+    onViewFullEditor: () -> Unit
+) {
+    var noteText by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Quick Note") },
+        text = {
+            TextField(
+                value = noteText,
+                onValueChange = { noteText = it },
+                placeholder = { Text("Type your note...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                maxLines = 5
+            )
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onViewFullEditor) {
+                    Text("Full Editor")
+                }
+                Button(
+                    onClick = {
+                        if (noteText.isNotBlank()) {
+                            viewModel.addNote("", noteText)
+                            onDismiss()
+                        }
+                    },
+                    enabled = noteText.isNotBlank()
+                ) {
+                    Text("Save")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

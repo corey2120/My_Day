@@ -41,6 +41,36 @@ class MainViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = SettingsManager.DEFAULT_THEME
     )
+    
+    val showGreeting: StateFlow<Boolean> = settingsManager.showGreeting.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
+    )
+    
+    val showQuote: StateFlow<Boolean> = settingsManager.showQuote.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
+    )
+    
+    val showNews: StateFlow<Boolean> = settingsManager.showNews.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
+    )
+    
+    val showWeather: StateFlow<Boolean> = settingsManager.showWeather.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+    
+    val newsCategory: StateFlow<String> = settingsManager.newsCategory.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = "general"
+    )
 
     val taskLists: StateFlow<List<TaskList>> = taskDao.getTaskLists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -82,6 +112,36 @@ class MainViewModel @Inject constructor(
     fun setTheme(themeName: String) {
         viewModelScope.launch {
             settingsManager.setTheme(themeName)
+        }
+    }
+    
+    fun setShowGreeting(show: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setShowGreeting(show)
+        }
+    }
+    
+    fun setShowQuote(show: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setShowQuote(show)
+        }
+    }
+    
+    fun setShowNews(show: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setShowNews(show)
+        }
+    }
+    
+    fun setShowWeather(show: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setShowWeather(show)
+        }
+    }
+    
+    fun setNewsCategory(category: String) {
+        viewModelScope.launch {
+            settingsManager.setNewsCategory(category)
         }
     }
 
